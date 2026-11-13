@@ -18,3 +18,6 @@ site/dist/
 
 # 先行研究の原本（著作権のため公開しない。ローカルのみ）
 library/
+
+# Claude Code のローカル設定
+.claude/settings.local.json
