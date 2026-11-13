@@ -1,0 +1,33 @@
+seed: 42
+data:
+  version: "jra-van-processed@75d8885"   # build_dataset.py のコミット。取り込み分は 2026-11-14 時点
+  target: win
+  tables: [races, entries, payouts, odds_final, odds_ts_win]
+universe:
+  exclude_abnormal_codes: [1, 2, 3]   # 出走取消・発走除外・競走除外（単勝返還）。4〜7 は残す
+  common_races: true                  # 全オッズ源で全出走馬のオッズがあるレースだけで比べる
+split:                                # 暫定（評価軸は後で決める）。2026 は使わない
+  train: ["2004-01-01", "2018-12-31"]
+  valid: ["2019-01-01", "2021-12-31"]
+  test: ["2022-01-01", "2025-12-31"]
+  holdout_never_evaluate: ["2026-01-01", "2026-12-31"]
+features: []
+model:
+  type: market_odds
+  params:
+    decision_minutes: [60, 30, 10, 5, null]   # null = 最後の中間オッズ
+    include_final: true
+    methods: [proportional, power, shin, goto, power_fit]
+    power_fit_on: train                       # オッズ源ごとに全体で 1 つの k
+eval:
+  reference: {odds: final, method: proportional}
+  ece_bins: 10
+  bootstrap: {n_boot: 2000, cluster: race, level: 0.95}
+  per_year: {odds: ["10", "last", "final"], method: proportional, years: [2004, 2025]}
+bets:
+  decision_odds: "10"
+  payout: hr_win_payout              # HR の単勝払戻金 / 100
+  threshold: 1.0                     # p·odds > threshold を 1 単位ずつ買う
+  methods: [proportional, power, shin, goto, power_fit]
+  all_horses_check: true             # 全馬を買ったときの回収率（≈ 0.8 になるはず）
+  splits: [valid, test]
