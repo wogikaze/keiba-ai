@@ -206,6 +206,14 @@ def fetch_unit(jv, kind: str, unit: str, dataspec: str, fromtime: str, option: i
             manifest_append(entry)
             log.warning("%s %s: 該当データなし (-1)", kind, unit)
             return entry
+        if code == -301 and option == 4:
+            # option 4 で -301（認証エラー）になる種別がある（WOOD: crossclub_lab、RACE・BLDN・SNPN: 2026-11-13 お試し中）。
+            # 同じ fromtime の option 1 で開き直すと通る
+            jv.JVClose()
+            log.warning("%s %s: option 4 で -301。option 1 で開き直す", kind, unit)
+            option = 1
+            entry.update(option=1, fallback_from_option=4)
+            continue
         if code < 0:
             jv.JVClose()
             entry.update(status="error", finished_at=now_iso())
