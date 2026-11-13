@@ -29,5 +29,6 @@ bets:
   payout: hr_win_payout              # HR の単勝払戻金 / 100
   threshold: 1.0                     # p·odds > threshold を 1 単位ずつ買う
   methods: [proportional, power, shin, goto, power_fit]
-  all_horses_check: true             # 全馬を買ったときの回収率（≈ 0.8 になるはず）
+  all_horses_check: true             # 全馬を 1 単位ずつ買ったときと、票数比例で買ったときの回収率
+  decision_field: snapshot           # 判断の確率は決定時刻の発表に載っている全馬で正規化（出走馬だけにしない）
   splits: [valid, test]

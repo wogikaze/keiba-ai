@@ -121,14 +121,31 @@ def main():
     Bt = cfg["bets"]
     pdf["pay_odds"] = pdf["win_payout_odds"].fillna(0.0)
     pdf["y_pay"] = pdf["win_payout_odds"].notna().astype(int)
-    dec = f"odds_{Bt['decision_odds']}"
+    ds = Bt["decision_odds"]
+    dec = f"odds_{ds}"
+    # 購入判断の確率は「決定時刻に見えていた馬」（その発表でオッズのある全馬）で正規化する。
+    # 出走馬だけで正規化し直すと、決定後に競走除外になった馬の分だけ Σp·odds が上がり、
+    # 決定時に知り得ない情報で p·odds > 1 の馬ができる（1 回目の実行で見つけた。README 参照）。
+    snap = sources[ds].filter(pl.col("win_odds").is_not_null() & (pl.col("win_odds") > 0))
+    snap = snap.filter(pl.col("race_key").is_in(pdf["race_key"].unique().tolist()))
+    for m in Bt["methods"]:
+        snap = mo.market_probs(snap, m, k=power_k.get(ds), out=f"pdec_{m}")
+    snap = snap.with_columns(wpool=(1 / pl.col("win_odds")) / (1 / pl.col("win_odds")).sum().over("race_key"))
+    pdf = pdf.merge(snap.select("race_key", "umaban", "wpool", *[f"pdec_{m}" for m in Bt["methods"]]).to_pandas(),
+                    on=["race_key", "umaban"], how="left")
     bets = {}
     for split in Bt["splits"]:
         d = pdf[pdf["split"] == split].rename(columns={"race_key": "race_id"})
         out = {}
-        runs = [(m, f"p_{Bt['decision_odds']}_{m}", Bt["threshold"]) for m in Bt["methods"]]
+        runs = [(m, f"pdec_{m}", Bt["threshold"]) for m in Bt["methods"]]
+        runs.append(("proportional_renormalized_to_starters", f"p_{ds}_proportional", Bt["threshold"]))
         if Bt["all_horses_check"]:
-            runs.append(("all_horses", f"p_{Bt['decision_odds']}_proportional", -1.0))
+            runs.append(("all_horses", f"pdec_proportional", -1.0))
+        # 票数に比例した賭け（各レースで決定時刻の 1/odds に比例して計 1 単位）。控除だけ負けるはず（≈ 0.8）
+        w = d["wpool"].fillna(0.0)
+        out["pool_weighted"] = {"stake": float(w.sum()), "return": float((w * d["pay_odds"] * d["y_pay"]).sum()),
+                                "n_races": int(d["race_id"].nunique())}
+        out["pool_weighted"]["return_ratio"] = out["pool_weighted"]["return"] / out["pool_weighted"]["stake"]
         for name, c, th in runs:
             r = ev.simulate_bets(d, c, decision_odds=dec, payout_odds="pay_odds", threshold=th, y="y_pay",
                                  n_boot=B["n_boot"], seed=cfg["seed"], level=B["level"])
@@ -137,7 +154,7 @@ def main():
                 r["return_ratio"] = r["return"] / r["stake"]
             out[name] = r
         bets[split] = out
-        print("bets", split, {k: (v["n_bets"], round(v.get("return_ratio", float("nan")), 4)) for k, v in out.items()})
+        print("bets", split, {k: (v.get("n_bets"), round(v.get("return_ratio", float("nan")), 4)) for k, v in out.items()})
 
     # 締切前オッズで見た控除（Σ1/odds）
     ovr = {s: float(pdf.assign(q=1 / pdf[f"odds_{s}"]).groupby("race_key")["q"].sum().median()) for s in sources}
