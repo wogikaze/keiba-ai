@@ -28,6 +28,8 @@ SAVE_PATH = ROOT / "jvlink-data"
 
 PROGRESS_EVERY = 50_000
 MAX_REOPEN = 3
+AUTH_RETRY = 2  # -301 のときに同じ指定で開き直す回数
+AUTH_RETRY_WAIT_S = 5
 
 log = logging.getLogger("jravan")
 
@@ -67,10 +69,31 @@ def open_jvlink(sid: str = "UNKNOWN"):
 
 def jv_open(jv, dataspec: str, fromtime: str, option: int) -> tuple[int, int, int, str]:
     """JVOpen。戻り値は (code, readcount, downloadcount, lastfiletimestamp)。"""
-    ret = jv.JVOpen(dataspec, fromtime, option, 0, 0, "")
-    if isinstance(ret, (list, tuple)):
-        return int(ret[0]), int(ret[1] or 0), int(ret[2] or 0), str(ret[3] or "")
-    return int(ret), 0, 0, ""
+    for attempt in range(AUTH_RETRY + 1):
+        ret = jv.JVOpen(dataspec, fromtime, option, 0, 0, "")
+        if isinstance(ret, (list, tuple)):
+            res = int(ret[0]), int(ret[1] or 0), int(ret[2] or 0), str(ret[3] or "")
+        else:
+            res = int(ret), 0, 0, ""
+        if res[0] != -301 or attempt == AUTH_RETRY:
+            return res
+        # プロセスを起動して最初の JVOpen が -301 になり、開き直すと通ることが多い（2026-11-13）
+        jv.JVClose()
+        log.warning("JVOpen %s %s: -301。%d 秒待って開き直す", dataspec, fromtime, AUTH_RETRY_WAIT_S)
+        time.sleep(AUTH_RETRY_WAIT_S)
+    return res
+
+
+def jv_rtopen(jv, dataspec: str, key: str) -> int:
+    """JVRTOpen。-301 のときは jv_open と同じく待って開き直す。"""
+    for attempt in range(AUTH_RETRY + 1):
+        code = int(jv.JVRTOpen(dataspec, key))
+        if code != -301 or attempt == AUTH_RETRY:
+            return code
+        jv.JVClose()
+        log.warning("JVRTOpen %s %s: -301。%d 秒待って開き直す", dataspec, key, AUTH_RETRY_WAIT_S)
+        time.sleep(AUTH_RETRY_WAIT_S)
+    return code
 
 
 def wait_download(jv, downloadcount: int, timeout_s: float = 6 * 3600) -> None:
@@ -242,7 +265,7 @@ def fetch_unit(jv, kind: str, unit: str, dataspec: str, fromtime: str, option: i
 def rt_fetch(jv, dataspec: str, key: str, out: Path) -> dict:
     """速報系（JVRTOpen）を 1 key 取得する。"""
     out.unlink(missing_ok=True)
-    code = int(jv.JVRTOpen(dataspec, key))
+    code = jv_rtopen(jv, dataspec, key)
     entry = {"dataspec": dataspec, "key": key, "open_code": code, "out": str(out), "fetched_at": now_iso()}
     if code == -1:
         jv.JVClose()
