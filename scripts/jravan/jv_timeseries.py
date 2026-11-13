@@ -30,16 +30,23 @@ def race_keys(year: int) -> list[str]:
     path = jc.RAW / "RACE" / f"{year}.txt"
     if not path.exists():
         raise FileNotFoundError(f"{path} が無い。先に jv_setup.py RACE で取得する")
+    # セットアップの年ファイルに加え、差分更新（raw\\RACE\\update）と当日の速報（raw\\realtime\\0B15）の RA も見る。
+    # そうしないとセットアップ後に増えたレースが対象にならない
+    files = [path, *sorted((jc.RAW / "RACE" / "update").glob("*.txt")),
+             *sorted((jc.RAW / "realtime" / "0B15").glob(f"{year}*/*.txt"))]
     keys: set[str] = set()
-    with open(path, "rb") as f:
-        for line in f:
-            if not line.startswith(b"RA"):
-                continue
-            if line[KUBUN_POS:KUBUN_POS + 1] == b"0":
-                continue
-            if line[JYO_SLICE].decode("ascii", errors="replace") not in JRA_JYO:
-                continue
-            keys.add(line[KEY_SLICE].decode("ascii"))
+    for p in files:
+        with open(p, "rb") as f:
+            for line in f:
+                if not line.startswith(b"RA"):
+                    continue
+                if line[KUBUN_POS:KUBUN_POS + 1] == b"0":
+                    continue
+                if line[JYO_SLICE].decode("ascii", errors="replace") not in JRA_JYO:
+                    continue
+                key = line[KEY_SLICE].decode("ascii")
+                if key[:4] == str(year):
+                    keys.add(key)
     return sorted(keys, reverse=True)
 
 
