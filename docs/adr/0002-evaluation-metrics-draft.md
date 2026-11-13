@@ -1,10 +1,12 @@
 ---
 title: 0002 評価指標（下書き）
 date: 2026-11-14
-status: draft
+status: superseded
 ---
 
 # 0002 評価指標（下書き）
+
+> [0004](./0004-evaluation-axes.md) で置き換えた。
 
 ## 状況
 

@@ -1,10 +1,12 @@
 ---
 title: 0003 暫定の分割・対象・市場の参照・特徴量 features_v1
 date: 2026-11-14
-status: provisional
+status: superseded
 ---
 
 # 0003 暫定の分割・対象・市場の参照・特徴量 features_v1
+
+> [0004](./0004-evaluation-axes.md) で置き換えた。
 
 ## 状況
 
