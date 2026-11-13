@@ -6,61 +6,129 @@ venue: Decision Analysis 10(3) 189-199
 url: https://pubsonline.informs.org/doi/10.1287/deca.2013.0271
 doi: 10.1287/deca.2013.0271
 topic: betting-strategy
-tags: kelly, estimation-error, shrinkage, fractional-kelly, tennis
-verified: abstract
+tags: kelly, estimation-error, shrinkage, fractional-kelly, tennis, bootstrap, expected-utility
+verified: fulltext
 importance: high
-source: unavailable
+source: downloaded
+source_version: accepted-manuscript
 ---
 
 # 勝率が推定値なら Kelly の賭け額を縮める：縮小係数 k の導出（2択の賭け）
 
-**原本未取得**。INFORMS の掲載版は有料で、Salford 大学のリポジトリ（USIR 36876）は全文非公開、移行先の worktribe は自動取得を拒否（403）、ResearchGate の著者アップロード版も取得できなかった。本ノートは要旨と、本論文を引用する論文（Chu, Wu & Swartz 2018 の著者版 PDF、[Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md)、[Uhrin 2021](./2021-uhrin-optimal-sports-betting-review.md)、[Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md)）の記述に基づく。数値やページは原本で確認していない。
+> 一言で: 推定勝率 $\hat p$ をそのまま使う Kelly は、推定誤差があると標本外の期待対数効用が下がる。賭け割合を $k\,s^*(\hat p)$ に縮めると必ず改善でき、誤差が小さいときの最適な $k$ は $k^* = s^{*2} / (s^{*2} + ((b+1)/b)^2\sigma^2)$ という簡単な式になる。シミュレーションと ATP テニス（2009年）の賭けで、縮小 Kelly が素の Kelly を上回った。
 
-> 一言で: Kelly 基準は勝率の推定値 $\hat p$ をそのまま使い、推定の不確実性を無視する。賭け割合を $k\,s^*(\hat p)$（$s^*$ は Kelly 割合、$0<k<1$）の形に限定して、標本外の期待効用を最大にする縮小係数 $k$ を求めると、不確実性があるときは $k<1$ が最適になる。シミュレーションとテニスの賭けデータで、縮小 Kelly が素の Kelly を上回った（要旨による）。
+原本は ResearchGate に著者が置いた 2013年3月21日付の原稿（査読者への謝辞があるので採録後の稿と判断）。ResearchGate への直接アクセスはボット確認で止まったため、Internet Archive の 2025年のスナップショットから取得した。ページ番号はこの原稿のページで、掲載誌の頁（189〜199）とは違う。
 
-## 要旨から分かること
+## 既存ノートからの訂正・確認
 
-- 問題: Kelly は推定勝率を真の値として使う。推定誤差を考えると、標本外の成績を上げるには賭け額を縮めるべき。
-- 方法: 縮小係数の推定値をいくつか比較する。ブートストラップを使う（キーワードによる）。
-- 評価: シミュレーションと、テニスの賭けデータ。
-- 結論: 縮小 Kelly は「生の」Kelly より良い。近似的な縮小係数の1つは、賭ける人が「封筒の裏」で計算できる簡易な補正になる。
-- 一般の危険回避的な効用関数での縮小（shrinkage）と膨張（swelling）、決定理論への含意も論じる（Salford リポジトリの要旨による）。
-- キーワード: Kelly criterion, parameter risk, expected utility, bootstrap, tennis betting, shrinkage。
+旧ノートは要旨と引用論文（Chu, Wu & Swartz 2018、Metel 2017 など）に頼っていた。原本で次のことを確認した。
 
-## 引用論文から分かる設定
+- 賭け割合を $k\,s^*(Q)$ に限って $k$ を最適化する、という Chu らの説明は正しい (p.6)。
+- 「封筒の裏の補正」は、誤差が小さいときの近似式 (5) と、それを Kelly の式に組み込んだ結論の式 (p.8, 18)。
+- 「ブートストラップ」は、最大化した期待効用を推定量の標本分布で平均し直す、という考え方の呼び名で (p.3)、実際の計算は beta 分布か二項分布を仮定した積分である。
+- テニスのデータは tennis-data.co.uk の ATP ツアー 2005〜2011年（15,794 試合）で、2005〜2008年で学習し 2009年で評価 (p.16)。
 
-- Chu, Wu & Swartz（"Modified Kelly criteria", JQAS 2018 の著者版 PDF、第1節）によれば、本論文は賭け割合を $k\,s^*(q)$ と仮定する。$s^*(p)$ は Kelly 割合、$q$ は $p$ の推定量、$0<k<1$ が縮小係数。その上で、効用が $k$、推定量 $q$、その標本分布にどう依存するかを、特定の $p$ の値ごとに分析する。代替の効用関数も扱う。Chu らはベイズ推定量を使い、賭け割合の形を仮定しない点で本論文と対比する。
-- 同じ著者らの続編（Baker & McHale 2016, International Journal of Statistics and Probability 5: 80-90）は、頻度論的リスクの最小化が事後期待損失の最小化より好ましい条件を論じる（Chu らによる）。
-- [Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md) は本論文を「2結果の賭けで、最適な Kelly の割合を与える縮小係数を導いた」と紹介し、多結果（単勝の n 頭）への拡張を自らの課題とした (Metel p.2)。
-- [Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md) と [Uhrin 2021](./2021-uhrin-optimal-sports-betting-review.md) は、確率の不確実性を考える Kelly の代表例として引用する。
+## モデル
 
-## 考え方の整理（一般論、原本未確認）
+### 問題設定 (p.5–6)
 
-推定勝率が真の勝率より高い賭けほど「有利に見える」ので、Kelly はその賭けに多く賭ける。誤差が平均ゼロでも、賭け額が推定値の増加関数であるため、過大評価の側で大きく賭けることになり、標本外の成長率は下がる（Metel p.2 も同じ説明）。対数効用の成長率は賭け割合について凹で、最適点の近くでは平らなので、少し縮めても失う成長率は小さく、過大賭けの損失は大きい。これが縮小が有利になる理由である。$k$ の最適値は推定の分散が大きいほど小さくなると考えられるが、本論文の具体式は未確認。
+分数オッズ $b$（勝てば賭け金の $b$ 倍の利益）の2択の賭け。真の勝率 $p$ が分かっていれば、対数効用 $E\,u(s) = p\ln(1+bs) + (1-p)\ln(1-s)$ を最大にする賭け割合が Kelly の式 $s^*(p) = ((b+1)p - 1)/b$。
 
-## 批判的に読む（原本未読のため限定的）
+$p$ の推定量 $Q$ が平均 $p$、分散 $\sigma^2$ の標本分布 $f(q)$ を持つとき、実際の期待効用は
 
-- 対象は2択の賭け（テニスの勝敗）。単勝のような多結果では、縮小を全馬一律の $k$ にするのか馬ごとにするのかで話が変わる。
-- 賭け割合を $k\,s^*(q)$ の形に限るのは制約で、Chu らはこの仮定を外したベイズ的な最適化を示している。
-- テニスのデータの規模、期間、オッズの出所、回収率の計算方法は未確認。
+$$E(u^*) = \int_0^1 f(q)\{p\ln(1+bks^*(q)) + (1-p)\ln(1-ks^*(q))\}\,dq$$
+
+になる（$k=1$ が素の Kelly）。最大化した効用を推定値で評価すると、標本外の効用を上に偏って見積もる (p.2–3)。
+
+### 定理1: 縮めれば必ず良くなる (p.7)
+
+$dE(u^*)/dk|_{k=1} = 1 - \frac{1}{b+1}E\{p/Q + (1-p)b/(1-Q)\}$ で、Jensen の不等式（$1/q$ と $1/(1-q)$ が凸）からこれは負。さらに $E(u^*)$ は $k$ について凹なので、最適な $k^*$ は $0<k^*<1$ に一つだけある。
+
+### 縮小係数の求め方
+
+- **beta 法** (p.7): $f$ を平均 $p$・分散 $\sigma^2$ の beta 分布と仮定し、式 (3) を Newton 法で解く。
+- **近似式** (p.8, 式 5): $\sigma$ が小さいとき
+
+$$k^* = \frac{((b+1)p-1)^2}{((b+1)p-1)^2 + (b+1)^2\sigma^2} = \frac{s^*(p)^2}{s^*(p)^2 + ((b+1)/b)^2\sigma^2}$$
+
+半分 Kelly（$k=1/2$）が最適になるのは、おおよそ $\sigma = p - 1/(1+b)$、つまり**推定誤差の標準偏差がエッジ（勝率と損益分岐の勝率の差）と同じ大きさのとき** (p.8)。
+
+結論では、これを Kelly の式に入れた次の式を推している (p.18)。
+
+$$s^* = \frac{((b+1)p-1)^3}{b\{((b+1)p-1)^2 + (b+1)^2\sigma^2\}}$$
+
+### 実務上の修正 (p.9)
+
+ブックメーカーでは負の賭け（レイ）ができないので、$Q < 1/(1+b)$ なら賭けない。このとき積分の下限が変わり、$k^*<1$ の一般的な証明は成り立たなくなるが、著者らは膨張（$k^*>1$）の例を見つけていない。テニスのように両者にオッズがある場合は、どちらに賭けるか・賭けないかの決定木を積分に組み込む。
+
+### 一般の危険回避的効用 (p.10–13)
+
+- 相対的危険回避度 $R_r$ が条件 (10) を満たせば縮小が起きる。対数効用と $R_r \le 1$ の等弾力的効用はこれに入る (p.11–12)。
+- 指数効用 $u(x) = -e^{-\lambda x}$ では、オッズが非常に良い（$b \gg 1$）と最適な賭けが**膨らむ**ことがある (p.12)。
+- $u''' > 0$ の滑らかな効用なら、$b \le 2$ では必ず縮小 (p.13, 定理4)。
+- 一般の効用での近似 $k^* = s^*(p)E(s^*(Q))/E(s^*(Q)^2)$ (p.13, 式 14)。
+
+## 例
+
+### シミュレーション (p.14–15)
+
+偶数オッズ（$b=1$）で「サイコロを5回振って6が出るか」（$p \approx 0.57$）に賭ける。賭ける人は8〜20組の試行から $p$ を推定する。100回の連続した賭けを 10,000 回シミュレーション。
+
+| 方法 | 平均最終資金 | 中央値 | 平均効用 |
+| --- | --- | --- | --- |
+| Kelly（$p$ 既知） | 44.5 | 7.48 | 1.98 |
+| 半分 Kelly（$p$ 既知） | 6.88 | 4.41 | 1.47 |
+| Kelly | 57.1 | 2.1 | 0.682 |
+| 半分 Kelly | 7.4 | 3.5 | 1.238 |
+| 近似式で縮小 | 26.3 | 2.7 | 0.936 |
+| beta 法で縮小 | 27.2 | 3.0 | 1.061 |
+| 二項分布で縮小 | 26.5 | 3.1 | 1.090 |
+
+(p.14, Table 1)。$p$ が不確かなとき、素の Kelly は平均資金が最大でも中央値と効用が最低になる。縮小法は Kelly を常に上回るが、この例では固定の半分 Kelly の方が効用は高い。著者らは、縮小法は誤差に応じて適応し Kelly を支配するが、半分 Kelly は支配しない、と主張する (p.15)。「平均効用」が 1 を超えるかどうかで「賭けない方が良いか」を判定しているので、表の効用は対数効用そのものではなく何らかの変換をした値と思われる（定義は原稿に無く未確認）。
+
+不利な賭け（3回で6、$p \approx 0.42$）では、Kelly の正しい賭け額は 0 だが、推定誤差のせいで賭けてしまう。縮小で損失が減る (p.15, Table 2)。
+
+### ATP テニス (p.16–17)
+
+- 勝率モデル: 世界ランキングポイントの比の対数だけを説明変数にしたロジスティック回帰。予測する試合ごとに学習期間から 1,000 試合を無作為に抜いて推定。
+- $\sigma^2$ の推定: モデルとブックメーカーの対数オッズの差の分散の半分を、モデルの予測の誤差分散とみなし、デルタ法で $\hat p$ の分散に直す。
+
+> simply using the statistical error of the model probability computed from the Hessian would greatly underestimate σ², because that computation assumes that the model is correct. (p.16)
+
+| 方法 | 平均最終資金 | 平均効用 | 賭けなかった割合 |
+| --- | --- | --- | --- |
+| Kelly | 0.984 | −0.0482 | 19.49% |
+| 半分 Kelly | 0.992 | −0.0161 | 19.49% |
+| 近似式で縮小 | 1.001 | −0.0024 | 19.49% |
+| beta 法で縮小 | 1.000 | −0.0027 | 54.17% |
+
+(p.17, Table 3)。縮小法は損失を減らしたが、ブックメーカーには勝てていない。資金が1を超えた近似法も有意ではない。モデルの Brier スコア 0.2271 はブックメーカーの 0.1886 より悪い (p.16)。
+
+## 批判的に読む
+
+- **$\sigma$ の推定がいちばん難しい。** 著者ら自身、$\sigma$ が大きいときほど推定しにくいと認める (p.17–18)。テニスの例の「誤差を半分ずつ分ける」は根拠の薄い便法である。
+- **モデルが市場より弱い例しか無い。** Brier スコアでブックメーカーに負けるモデルでは、縮小は「損を減らす」効果しか示せない。市場に勝つモデルで縮小が成長率を上げるかは示されていない。
+- **2択に限る。** 多結果（単勝）や同時に複数の賭けをする場合は、each-way などに拡張できると書くだけで扱っていない (p.18)。
+- 回収率は控除込みの実オッズで計算している（ブックメーカーの提示オッズを使用）。ただしどの業者のオッズを使ったか（最大か平均か）は書かれていない。
 
 ## keiba-ai での使い方
 
-- **fractional Kelly の係数を経験則でなく推定誤差から決める**: 単勝確率モデルのブートストラップ（またはアンサンブル）で各馬の勝率の分散を出し、分散が大きい馬ほど Kelly 割合を縮める。最初は全馬共通の $k$ を検証期間の対数成長率最大で選び、次に分散に応じた馬ごとの $k$ と比べる。
-- **実験案**: 仮説「ブートストラップの分散で馬ごとに縮める Kelly は、全馬一律の $k$ の fractional Kelly より、評価期間の対数成長率が高い」。新馬・休み明けなどデータの少ない馬で差が出るはず。
-- 多頭立てへの拡張は [Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md)（係数の推定誤差から勝率をサンプリングする方法）を参照する。
-- 原本が手に入ったら、縮小係数の近似式（「封筒の裏」の補正）を確認して、ここに追記する。
+- **fractional Kelly の係数を推定誤差から決める。** 近似式 (5) は、勝率の推定誤差の分散 $\sigma^2$ が分かれば馬ごとに $k$ を出せる。単勝なら $b = $ オッズ $- 1$。$\sigma$ はブートストラップやアンサンブルの予測のばらつき、または市場確率との差の分散から推定する。
+- **$\sigma$ をモデル内部の標準誤差で出さない。** 本論文の警告どおり、モデルが正しい前提の誤差は小さすぎる。keiba-ai では、検証期間で「モデル確率と市場確率の対数オッズの差」の分散を条件別（新馬・休み明け・頭数など）に集計し、$\sigma$ の目安にする案がある。
+- **実験案**: 仮説「近似式 (5) で馬ごとに縮める Kelly は、全馬一律の $k$ の fractional Kelly と比べ、評価期間の対数成長率が同等以上で、最大ドローダウンが小さい」。半分 Kelly が最適になる条件（$\sigma \approx$ エッジ）を目安に、一律 $k$ の初期値も決められる。
+- **エッジが小さい賭けほど強く縮む**（$k^*$ は $s^{*2}$ に比例して小さくなる）。わずかな期待値の賭けを大量に拾う設計は、この縮小でほぼ賭けなくなる。
+- 多頭立てへの拡張は [Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md) を参照する。
 
 ## 関連ノート
 
 - [Kelly 1956](./1956-kelly-information-rate.md): 縮小の対象となる元の基準。
-- [MacLean 1992](./1992-maclean-growth-versus-security.md): 推定値の使用による過大賭けと fractional Kelly。本論文の背景。
+- [MacLean 1992](./1992-maclean-growth-versus-security.md): fractional Kelly と成長・安全のトレードオフ。本論文が背景として引く。
 - [Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md): 本論文の考えを単勝の多結果に拡張。
 - [Sun 2018](./2018-sun-distributional-robust-kelly.md): 確率の不確実性を最悪ケース（分布ロバスト）で扱う別の方法。
 - [Uhrin 2021](./2021-uhrin-optimal-sports-betting-review.md): fractional Kelly の係数を検証データで選ぶ実証比較。
-- [Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md): fractional Kelly の別の定義（成長率の k 割を保つ）。
-- [Thorp 2008](./2008-thorp-kelly-criterion-blackjack-sports.md): 実務での Kelly と半分 Kelly。
+- [Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md): 確率の不確実性を考える Kelly の例として本論文を引用。
+- [Thorp 2008](./2008-thorp-kelly-criterion-blackjack-sports.md): 実務での Kelly と半分 Kelly。本論文はブラックジャックの例として Thorp (2006) を引く。
 
 ## 検索語
 
-パラメータ不確実性, 推定誤差, 縮小係数, 縮小ケリー, 分数ケリー, 半分ケリー, 過大賭け, ブートストラップ, 期待効用, テニス, parameter uncertainty, parameter risk, estimation error, shrinkage factor, shrunken Kelly, fractional Kelly, overbetting, bootstrap, expected utility, tennis betting, Decision Analysis, Baker McHale
+パラメータ不確実性, 推定誤差, 縮小係数, 縮小ケリー, 分数ケリー, 半分ケリー, ハーフケリー, 過大賭け, ブートストラップ, 期待効用, 対数効用, 相対的危険回避度, 指数効用, 賭けの膨張, beta 分布, デルタ法, テニス, ATP, Brier スコア, parameter uncertainty, parameter risk, estimation error, shrinkage factor, shrunken Kelly, fractional Kelly, half Kelly, bet swelling, overbetting, bootstrap, expected utility, Jensen inequality, tennis betting, Decision Analysis, Baker McHale

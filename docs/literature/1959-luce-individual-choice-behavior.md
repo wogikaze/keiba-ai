@@ -14,7 +14,7 @@ source: unavailable
 
 # Luce の選択公理：Plackett-Luce と多項ロジットの理論的な出発点
 
-> **原本未取得。** 書籍（New York: Wiley / London: Chapman & Hall, 1959, xii+153 p.、Dover 再版あり）で、合法な無料の全文が見つからなかった。本ノートは書誌情報と、公理を正確に引用する後続論文（Hunter 2004、Guiver & Snelson 2009、Ali 1998。いずれも library に原本あり）に基づく。本書固有の章立て・議論は未確認。
+> **原本未取得。** 書籍（New York: Wiley / London: Chapman & Hall, 1959, xii+153 p.、Dover 再版あり）で、著作権が更新されておらず、米国では HathiTrust で全文が公開されている（パブリックドメイン、mdp.39015002995184）。ただ 2026-11-13 の取得では HathiTrust 側に接続元 IP をブロックされ、保存できなかった。Internet Archive の版は貸出制。本ノートは書誌情報と、公理を正確に引用する後続論文（Hunter 2004、Guiver & Snelson 2009、Ali 1998。いずれも library に原本あり）に基づく。本書固有の章立て・議論は未確認。
 
 > 一言で: 「選択肢の集合 $B$ から $i$ が選ばれる確率は、部分集合 $A$ を経由して選んだ場合の確率の積に分解できる」という選択公理を置くと、各選択肢に正の重み $\gamma_i$ が存在して選択確率が $\gamma_i/\sum_{j\in B}\gamma_j$ になることを示した。これを「1着を選び、残りから2着を選ぶ…」と繰り返したものが Plackett-Luce モデルであり、競馬の Harville 公式と条件付きロジット（softmax）の共通の土台になる。
 
