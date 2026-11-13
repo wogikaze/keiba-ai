@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { type Page, pagesIn, titleOf } from '../content'
+import { type Page, pages, pagesIn, titleOf } from '../content'
 
 const props = defineProps<{ section: string; title: string }>()
 
@@ -19,6 +19,8 @@ const onlyHigh = ref(false)
 const withSource = ref(false)
 
 const all = computed(() => pagesIn(props.section))
+// docs/<section>/index.md があれば、一覧の上に説明として表示する
+const intro = computed(() => pages.find((p) => p.path === `/${props.section}`))
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   return all.value.filter((p) => {
@@ -41,7 +43,8 @@ const groups = computed(() => {
   for (const list of map.values()) {
     list.sort((a, b) =>
       (IMPORTANCE_ORDER[a.frontmatter.importance] ?? 9) - (IMPORTANCE_ORDER[b.frontmatter.importance] ?? 9)
-      || Number(a.frontmatter.year ?? 0) - Number(b.frontmatter.year ?? 0))
+      || Number(a.frontmatter.year ?? 0) - Number(b.frontmatter.year ?? 0)
+      || a.path.localeCompare(b.path))
   }
   const order = Object.keys(TOPIC_LABELS)
   return [...map.entries()].sort(
@@ -52,7 +55,9 @@ const grouped = computed(() => all.value.some((p) => p.frontmatter.topic))
 </script>
 
 <template>
-  <h1>{{ title }}</h1>
+  <component :is="intro.component" v-if="intro" />
+  <h1 v-else>{{ title }}</h1>
+  <h2 v-if="intro">一覧</h2>
   <p v-if="!all.length">まだありません。</p>
   <template v-else>
     <div class="filters">

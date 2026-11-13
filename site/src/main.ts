@@ -13,6 +13,7 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/literature', component: ListPage, props: { section: 'literature', title: '先行研究' } },
+    { path: '/ideas', component: ListPage, props: { section: 'ideas', title: '研究アイデア' } },
     { path: '/adr', component: ListPage, props: { section: 'adr', title: '設計判断 (ADR)' } },
     { path: '/experiments', component: ExperimentsPage },
     ...pages.map((page) => ({ path: page.path, component: DocPage, props: { page } })),

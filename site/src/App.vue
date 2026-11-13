@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const nav = [
   { to: '/literature', label: '先行研究' },
+  { to: '/ideas', label: 'アイデア' },
   { to: '/adr', label: 'ADR' },
   { to: '/experiments', label: '実験' },
 ]

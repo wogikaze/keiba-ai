@@ -434,8 +434,15 @@ def cmd_search(a) -> None:
     terms = [t.lower() for t in a.terms]
     topics = {p.stem: frontmatter(p) for p in LIT.glob("*.md")}
     hits = 0
+    # 同じ原本（書籍全体など）を複数のノートで共有している場合は1回だけ表示する
+    by_hash: dict[str, list[Path]] = {}
     for txt in sorted([*LIB.glob("*/source.txt"), *LIB.glob("*/attachments/*.txt")]):
-        slug = txt.parent.name if txt.name == "source.txt" else txt.parent.parent.name
+        h = hashlib.sha256(txt.read_bytes()).hexdigest()
+        by_hash.setdefault(h, []).append(txt)
+    shared = {paths[0]: [p.parent.name if p.name == "source.txt" else p.parent.parent.name for p in paths]
+              for paths in by_hash.values()}
+    for txt, owners in shared.items():
+        slug = owners[0]
         fm = topics.get(slug, {})
         if a.topic and fm.get("topic") != a.topic:
             continue
@@ -453,6 +460,8 @@ def cmd_search(a) -> None:
             if not shown_header:
                 print(f"\n## {slug}  —  {fm.get('title', '')}")
                 print(f"   note: docs/literature/{slug}.md   source: {txt.relative_to(ROOT)}")
+                if len(owners) > 1:
+                    print(f"   （同じ原本を共有: {', '.join(owners[1:])}）")
                 shown_header = True
             loc = f"p.{page} " if page else ""
             lo, hi = max(0, i - a.context), min(len(lines), i + a.context + 1)
