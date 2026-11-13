@@ -45,7 +45,9 @@ def race_keys(year: int) -> list[str]:
                 if line[JYO_SLICE].decode("ascii", errors="replace") not in JRA_JYO:
                     continue
                 key = line[KEY_SLICE].decode("ascii")
-                if key[:4] == str(year):
+                # 年ファイルは「提供された年」で分かれていて、前年末のレースも入るのでそのまま使う。
+                # 差分・速報のファイルは年をまたぐので、開催年で絞る
+                if p == path or key[:4] == str(year):
                     keys.add(key)
     return sorted(keys, reverse=True)
 
