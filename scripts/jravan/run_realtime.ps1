@@ -1,4 +1,4 @@
-# 開催日の速報を記録する（当日分）。タスクスケジューラから土日の朝に起動する
+﻿# 開催日の速報を記録する（当日分）。タスクスケジューラから土日の朝に起動する
 $env:PYTHONIOENCODING = 'utf-8'
 Set-Location 'E:\keiba-ai\jra-van\scripts'
 $py = '.venv\Scripts\python.exe'

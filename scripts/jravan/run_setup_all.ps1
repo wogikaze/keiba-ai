@@ -1,4 +1,4 @@
-# セットアップ（全種別）を計画の順に実行する。docs/data/jra-van-download-plan.md「Day 0〜2: セットアップ」
+﻿# セットアップ（全種別）を計画の順に実行する。docs/data/jra-van-download-plan.md「Day 0〜2: セットアップ」
 # 済んだ単位はマニフェストで飛ばすので、途中で止まっても再実行すれば続きから。
 $ErrorActionPreference = 'Continue'
 $env:PYTHONIOENCODING = 'utf-8'

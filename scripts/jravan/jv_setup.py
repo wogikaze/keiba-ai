@@ -1,7 +1,7 @@
 """セットアップ（option 4）を dataspec × 年で取得する。
 
 例:
-  python jv_setup.py RACE 1986 2026     # 1 年ずつ。最後の年は終了時刻なしで開く
+  python jv_setup.py RACE 1986 2026     # 1 年ずつ。今年は今の時刻までで区切る
   python jv_setup.py DIFN --all         # 期間指定できない種別は 1 回で取る
 
 出力: raw\\<dataspec>\\<年>.txt（--all のときは raw\\<dataspec>\\all.txt）。
@@ -44,8 +44,11 @@ def main() -> None:
         end = a.end or dt.date.today().year
         for year in range(a.start, end + 1):
             begin = f"{year}0101000000"
-            # 最後の年は終了時刻なし（開発ガイド p.23: 最後の 1 回は終了時刻を付けない）
-            fromtime = begin if year == end else f"{begin}-{year + 1}0101000000"
+            # 開発ガイド p.23 は「最後の 1 回は終了時刻を付けない」とするが、お試し中の RACE は
+            # 終了時刻なしの option 4 で -301（認証エラー）になった（2026-11-13）。最後の年は今の時刻で区切り、
+            # それ以降は jv_update.py（option 1）で差分を取る
+            stop = dt.datetime.now().strftime("%Y%m%d%H%M%S") if year == dt.date.today().year else f"{year + 1}0101000000"
+            fromtime = f"{begin}-{stop}"
             unit = f"{a.dataspec}:{year}"
             if jc.manifest_done("setup", unit):
                 jc.log.info("済み: %s", unit)
