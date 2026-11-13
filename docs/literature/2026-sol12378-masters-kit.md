@@ -75,6 +75,7 @@ model-pipeline の「特徴量」の節:
 ## 関連ノート
 
 - [netkeiba AI競馬予想マスターズ2026](./2026-netkeiba-ai-masters-2026.md): この実装が参加した大会。
+- [liberty1746 2026](./2026-liberty1746-ai-masters-2026.md): 同じ大会の14位（ロロ）。LightGBM の1着分類で、オッズは資金配分にだけ使った対照的な例。
 - [Harville 1973](./1973-harville-multi-entry-probabilities.md): 単勝からの順序確率。
 - [Lo 1994](./1994-lo-comparison-harville-henery.md): Harville の人気薄過小評価の偏り。
 - [Benter 2019](./2019-benter-model.md): 市場確率とモデルの結合。

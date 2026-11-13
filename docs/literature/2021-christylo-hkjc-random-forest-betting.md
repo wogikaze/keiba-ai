@@ -54,7 +54,6 @@ source_version: web
 
 ## 関連ノート
 
-- [karenwky 2019](./2019-karenwky-hkjc-predictive-modeling.md): 同じく香港データで「100%の正解率」を出した反面教師。
 - [catowabisabi 2026](./2026-catowabisabi-hkjc-quinella-lightgbm.md): 香港データで小標本の大きな利益を報告した別の例。
 - [Hausch 1981](./1981-hausch-racetrack-market-efficiency.md): 複勝の期待値を単勝オッズから正しく近似する方法。
 - [Sugiura 2026](./2026-sugiura-leakage-aware-evaluation.md): リークを意識した評価。

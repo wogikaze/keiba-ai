@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import hashlib
+import gzip
 import json
 import os
 import re
@@ -312,6 +313,9 @@ def cmd_fetch(a) -> None:
             body = r.read()
             ctype = r.headers.get("Content-Type", "")
             final_url = r.geturl()
+    # Wayback の id_ URL などは gzip のまま返ることがある
+    if body[:2] == b"\x1f\x8b":
+        body = gzip.decompress(body)
     kind = a.kind or ("pdf" if body[:5] == b"%PDF-" else "html")
     if a.kind == "pdf" and body[:5] != b"%PDF-":
         sys.exit(f"PDF ではない応答（Content-Type: {ctype}）。ログインページや要約ページの可能性。")
@@ -377,6 +381,8 @@ def cmd_attach(a) -> None:
     req = urllib.request.Request(a.url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=60) as r:
         body, ctype, final_url = r.read(), r.headers.get("Content-Type", ""), r.geturl()
+    if body[:2] == b"\x1f\x8b":
+        body = gzip.decompress(body)
     kind = "pdf" if body[:5] == b"%PDF-" else "html"
     src = d / f"{a.name}.{kind}"
     src.write_bytes(body)
