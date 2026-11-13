@@ -62,6 +62,7 @@ def main() -> None:
     p.add_argument("--since", help="この日（YYYYMMDD）以降のレースだけ")
     p.add_argument("--until", help="この日（YYYYMMDD）以前のレースだけ。既定は昨日")
     p.add_argument("--specs", default="0B41,0B42")
+    p.add_argument("--stop-at", help="この時刻（HHMM）になったら途中で終える。開催日の速報記録と重ならないようにする。次回は続きから")
     p.add_argument("--stop-after-nodata", type=int, default=200,
                    help="連続でこの件数だけ no_data が続いたら、その年を打ち切る")
     a = p.parse_args()
@@ -70,13 +71,24 @@ def main() -> None:
     jv = jc.open_jvlink()
     specs = a.specs.split(",")
     until = a.until or (dt.date.today() - dt.timedelta(days=1)).strftime("%Y%m%d")
+    stop_at = None
+    if a.stop_at:
+        stop_at = dt.datetime.combine(dt.date.today(), dt.datetime.strptime(a.stop_at, "%H%M").time())
+        if stop_at <= dt.datetime.now():
+            stop_at += dt.timedelta(days=1)
+        jc.log.info("%s に止める", stop_at)
     for year in range(a.start, a.end - 1, -1):
         keys = [k for k in race_keys(year) if k[:8] <= until and (not a.since or k[:8] >= a.since)]
         done = done_keys(year)
         log_path = jc.LOGS / f"timeseries_{year}.jsonl"
         ok = nodata = streak = 0
         jc.log.info("%d 年: %d レース（済み %d 件）", year, len(keys), len(done))
+        stopped = False
         for i, key in enumerate(keys, 1):
+            if stop_at and dt.datetime.now() >= stop_at:
+                jc.log.info("--stop-at に達したので終える（%d 年の途中、次回は続きから）", year)
+                stopped = True
+                break
             for ds in specs:
                 if (ds, key) in done:
                     continue
@@ -96,6 +108,8 @@ def main() -> None:
             if streak >= a.stop_after_nodata:
                 jc.log.warning("%d 年: no_data が %d 件続いたので打ち切る", year, streak)
                 break
+        if stopped:
+            return
         jc.manifest_append({"kind": "timeseries", "unit": str(year), "races": len(keys), "ok": ok,
                             "no_data": nodata, "status": "ok", "finished_at": jc.now_iso()})
         jc.log.info("%d 年: 完了 ok %d, no_data %d / %d レース", year, ok, nodata, len(keys))
