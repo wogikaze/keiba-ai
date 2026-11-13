@@ -1,0 +1,89 @@
+seed: 42
+data:
+  version: auto            # 実行時に features.data_version() と market_odds のキャッシュを results.json に書く
+  target: win
+  tables: [races, entries, payouts, odds_final, odds_ts_win, horses, training_slope, training_wood]
+universe:
+  exclude_abnormal_codes: [1, 2, 3]   # 出走取消・発走除外・競走除外（単勝返還）。4〜7 は残す
+  # market-baseline と同じ共通レース（6 つのオッズ源すべてで全出走馬のオッズがある）
+  common_odds_sources: ["60", "30", "10", "5", "last", "final"]
+  # さらに A・B・C の予測と features_v1 が全出走馬にあり、勝ち馬のいるレースだけ（全モデルで同じレース集合）
+  require_models: [A_top3, B_rank, C_win]
+split:                                # 暫定（ADR 0003）。両端を含む
+  train: ["2004-01-01", "2018-12-31"]
+  valid: ["2019-01-01", "2021-12-31"]
+  test: ["2022-01-01", "2025-12-31"]
+  holdout_never_evaluate: ["2026-01-01", "2026-12-31"]
+market:
+  reference: {odds: "10", method: power_fit, fit_on: train}   # market-baseline の推奨（k ≈ 1.061）
+  final: {odds: final, method: proportional}                  # 購入時に知り得ない上限（比較用・リーク対照用）
+  expected_k: 1.0609220563291160                              # market-baseline の値。ずれたら警告
+models:
+  lgbm_preds:                         # experiments/2026-11-14_lgbm-nomarket の出力
+    A_top3: data/processed/jra-van/derived/preds_lgbm_A_top3.parquet
+    B_rank: data/processed/jra-van/derived/preds_lgbm_B_rank.parquet
+    C_win: data/processed/jra-van/derived/preds_lgbm_C_win.parquet
+benter:
+  fit_on: valid                       # train 行は LGBM の学習データ上の予測なので使わない
+  eval_on: test
+clogit:
+  fit_on: train
+  l2_grid: [0.0, 1.0e-4, 1.0e-3, 1.0e-2]   # train で当てはめ、valid の race logloss で 1 つ選ぶ
+  clip_z: 5.0
+  log1p: [h_days_since, h_n_runs]
+  # lgbm-nomarket の gain 上位（3 本の共通部分）から数値の列だけ。n_runners などレース内で一定の列は除く
+  features: [h_pos_mean5_z, h_pos_1, h_behind_1, jk_win_rate_z, h_prize_log_z, h_same_surface_top3_rate,
+             h_fig_max5_z, jk_top3_rate_1y, h_fig_mean3_z, h_class_change, h_days_since, h_pos_mean5,
+             h_dist_change, h_corner4_mean3, h_l3f_mean3_z, h_behind_mean3, tr_top3_rate_1y, jk_win_rate_1y,
+             h_pos_2, weight_carried_rel, umaban_rel, h_n_runs, weight_diff, age]
+offset_lgbm:
+  features: features_v1               # 81 列すべて（オッズ・人気は入っていない）。オッズは init_score だけ
+  feature_config:                     # keiba_ai.features.FeatureConfig（lgbm-nomarket と同じ）
+    min_year: 1986
+    not_started_codes: [1, 2, 3]
+    n_last: 5
+    n_recent_mean: 3
+    rate_prior_strength: 20.0
+    recent_days: 365
+    speed_min_n: 30
+    behind_clip: [-2.0, 10.0]
+    fig_clip: [-10.0, 10.0]
+    training_window_days: 14
+  init_score: log_p_market_n10_power_fit   # 学習・valid・test のどの行も 10 分前のオッズ（確定オッズは使わない）
+  num_boost_round: 5000
+  early_stopping_rounds: 200
+  log_every: 100
+  params:
+    learning_rate: 0.02
+    num_leaves: 31
+    min_data_in_leaf: 500
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 1
+    lambda_l2: 10.0
+    max_bin: 255
+    cat_smooth: 10
+    num_threads: 10
+    verbose: -1
+placebo:
+  shuffle_n_rep: 10                   # レース内で model の確率を並べ替え（valid と test の両方）、α を当てはめ直す
+  leaky_positive_control: final_proportional   # 「モデル」に確定オッズの確率を入れる（リークの見え方のデモ）
+eval:
+  ece_bins: 10
+  bootstrap: {n_boot: 2000, level: 0.95, clusters: [race, date]}
+bets:
+  select_by: valid_logloss            # 結合モデルのうち valid の logloss が最小のものを 1 つ（test では選ばない）
+  thresholds: [1.0, 1.1, 1.2]         # p·decision_odds > th を 1 単位ずつ
+  decision_odds: "10"                 # 10 分前の発表のオッズ
+  decision_field: snapshot            # 判断の確率は決定時刻の発表に載っている全馬で正規化
+  # 決定時刻の発表に載っていて後で取消・除外になった馬のいるレースは、その馬のモデル予測がないので賭けから除く（件数を書く）
+  drop_races_scratched_after_decision: true
+  payout: hr_win_payout
+  splits: [valid, test]
+  by_year: true
+git_tracked_paths:
+  - src/keiba_ai/market_offset.py
+  - src/keiba_ai/evaluate.py
+  - src/keiba_ai/baselines/market_odds.py
+  - src/keiba_ai/features.py
+  - experiments/2026-11-14_market-combination
