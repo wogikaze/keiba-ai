@@ -11,6 +11,7 @@
 | `experiments/` | 実験。1実験1ディレクトリ、`YYYY-MM-DD_短い名前/` |
 | `experiments/INDEX.md` | リーダーボード。**手で編集しない**（`scripts/build_index.py` で生成） |
 | `src/keiba_ai/` | 再利用するPythonコード（特徴量・学習・評価） |
+| `library/` | 先行研究の原本（PDF・HTML）と文字起こし。**git管理しない**（著作権）。`scripts/library.py` で管理 |
 | `data/` | データ本体。git管理しない（`raw/` は不変、`processed/` は再生成可能） |
 | `site/` | ox-content + Vue の閲覧サイト。main への push で GitHub Pages に自動デプロイ |
 
@@ -36,10 +37,26 @@
 - frontmatter はフラットな `key: value` のみ（ox-content のパーサー仕様）。
 - 特徴量・分割・評価方法の変更は、理由を ADR に残してから実験する。
 
+## 先行研究のルール
+
+- 1文献1ノート（`docs/literature/<year>-<第一著者>-<キーワード>.md`）。原本は `library/<同じslug>/` に置く。
+- 原本は合法に無料で取れる版（出版社のOA、arXiv、著者PDF、J-STAGE、SSRN、ワーキングペーパー）だけを取得する。取れなければ `library.py mark <slug> unavailable --reason ...` で記録する。
+- スキャン画像や文字化けしたPDF（`needs_ocr`）は `library.py ocr` で機械 OCR する。LLM に逐語で文字起こしさせない（長文の転載として出力がブロックされる）。
+- ノートが二次資料に頼った場合、その資料も `library.py attach` で保存する。
+- ノートの数値・主張には原本のページを付ける（例: `(p.12)`）。原文の引用は短く（1〜2文）。ノートは公開されるため。
+- 書く前に `library.py search` で原本を検索し、既存ノートとの関係を「関連ノート」に書く。
+- `uv run python scripts/check_literature.py` が通ること。
+
 ## コマンド
 
 ```sh
 uv sync                                  # Python環境
 uv run python scripts/build_index.py     # INDEX.md 再生成
+uv run python scripts/library.py search 語 [語...]   # 原本の全文検索（ページ番号つき）
+uv run python scripts/library.py status -v          # 原本の取得状況
+uv run python scripts/library.py fetch <slug> <url> --version published   # 原本を取得
+uv run python scripts/library.py add <slug> <PDF> --url <入手元>          # 手動ダウンロードした原本を取り込む
+uv run python scripts/library.py attach <slug> <名前> <url>               # 二次資料を添付
+uv run --extra ocr python scripts/library.py ocr                          # スキャン・文字化けPDFを OCR
 cd site && pnpm install && pnpm dev      # 閲覧サイト
 ```

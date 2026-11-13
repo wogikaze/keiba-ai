@@ -1,11 +1,28 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import renderMathInElement from 'katex/contrib/auto-render'
 import { useRouter } from 'vue-router'
 import { type Page, resolveMarkdownLink, resultOf } from '../content'
 import MetricsTable from '../components/MetricsTable.vue'
 
 const props = defineProps<{ page: Page }>()
 const router = useRouter()
+const body = ref<HTMLElement>()
+
+// ox-content の Vue 統合は数式を変換しないので、表示後に KaTeX で描画する
+onMounted(async () => {
+  await nextTick()
+  if (body.value) {
+    renderMathInElement(body.value, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+      ],
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+      throwOnError: false,
+    })
+  }
+})
 
 const result = computed(() => (props.page.section === 'experiments' ? resultOf(props.page) : undefined))
 const meta = computed(() =>
@@ -35,7 +52,7 @@ function onClick(e: MouseEvent) {
         <dd>{{ v }}</dd>
       </template>
     </dl>
-    <div @click="onClick">
+    <div ref="body" @click="onClick">
       <component :is="page.component" />
     </div>
     <section v-if="result" class="results">

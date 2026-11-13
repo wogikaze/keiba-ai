@@ -15,3 +15,6 @@ __pycache__/
 # site
 site/node_modules/
 site/dist/
+
+# 先行研究の原本（著作権のため公開しない。ローカルのみ）
+library/

@@ -10,3 +10,7 @@ declare module '*.vue' {
   const component: Component
   export default component
 }
+declare module 'katex/contrib/auto-render' {
+  const render: (el: HTMLElement, options?: Record<string, unknown>) => void
+  export default render
+}

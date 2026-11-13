@@ -6,6 +6,7 @@ import ListPage from './pages/ListPage.vue'
 import ExperimentsPage from './pages/ExperimentsPage.vue'
 import NotFound from './pages/NotFound.vue'
 import { pages } from './content'
+import 'katex/dist/katex.min.css'
 import './style.css'
 
 const router = createRouter({
