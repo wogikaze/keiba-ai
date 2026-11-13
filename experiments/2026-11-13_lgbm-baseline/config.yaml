@@ -1,0 +1,22 @@
+seed: 42
+data:
+  version: ""          # TODO: データ取得後に記入
+  target: win
+split:
+  train: ["2015-01-01", "2022-12-31"]
+  valid: ["2023-01-01", "2023-12-31"]
+  test: ["2024-01-01", "2024-12-31"]
+features:
+  - horse_age
+  - weight_carried
+  - distance
+  - surface
+  - last3_finish_mean
+model:
+  type: lightgbm
+  params:
+    objective: lambdarank
+    learning_rate: 0.05
+    num_leaves: 31
+    n_estimators: 1000
+    early_stopping_rounds: 50

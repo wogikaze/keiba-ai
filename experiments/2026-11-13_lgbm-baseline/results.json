@@ -1,0 +1,9 @@
+{
+  "experiment": "2026-11-13_lgbm-baseline",
+  "status": "planned",
+  "git_hash": null,
+  "data_version": null,
+  "seed": 42,
+  "split": "2015-2022/2023/2024",
+  "metrics": {}
+}

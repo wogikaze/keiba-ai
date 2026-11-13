@@ -1,0 +1,17 @@
+# data
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+*.parquet
+*.pkl
+models/
+
+# python
+__pycache__/
+.venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# site
+site/node_modules/
+site/dist/

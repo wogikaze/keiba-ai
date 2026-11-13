@@ -1,0 +1,12 @@
+seed: 42
+data:
+  version: ""          # 例: jra-2010-2025@v1
+  target: win          # win / top3
+split:
+  train: ["2010-01-01", "2022-12-31"]
+  valid: ["2023-01-01", "2023-12-31"]
+  test: ["2024-01-01", "2024-12-31"]
+features: []
+model:
+  type: ""
+  params: {}
