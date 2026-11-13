@@ -3,7 +3,7 @@ param([string]$StopAt = '0730')
 $env:PYTHONIOENCODING = 'utf-8'
 # 他の取得（Day 0 のセットアップなど）と JV-Link を同時に使わない。run_day0.ps1 から呼ばれたときは同じプロセスなので取れる
 $m = New-Object System.Threading.Mutex($false, 'Global\keiba-jv')
-try { $got = $m.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $got = $true }
+try { $got = $m.WaitOne([TimeSpan]::FromMinutes(40)) } catch [System.Threading.AbandonedMutexException] { $got = $true }
 if (-not $got) { "$(Get-Date -Format s) run_timeseries: 別の取得が実行中なので終える" | Add-Content 'E:\keiba-ai\jra-van\logs\mutex_skip.log'; exit 0 }
 Set-Location 'E:\keiba-ai\jra-van\scripts'
 $py = '.venv\Scripts\python.exe'

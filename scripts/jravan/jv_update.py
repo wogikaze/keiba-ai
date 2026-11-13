@@ -32,7 +32,12 @@ def main() -> None:
         else:
             fromtime = a.default_from or (dt.date.today() - dt.timedelta(days=365)).strftime("%Y%m%d000000")
             jc.log.warning("%s: state が無いので %s から", ds, fromtime)
-        e = jc.fetch_unit(jv, "update", f"{ds}:{stamp}", ds, fromtime, 1, jc.RAW / ds / "update" / f"{stamp}.txt")
+        try:
+            e = jc.fetch_unit(jv, "update", f"{ds}:{stamp}", ds, fromtime, 1, jc.RAW / ds / "update" / f"{stamp}.txt")
+        except RuntimeError as err:
+            # 1 種別の失敗で残りを止めない。state は進めないので次回また同じ fromtime から取る
+            jc.log.error("%s: %s", ds, err)
+            continue
         if e.get("status") == "ok" and e.get("lastfiletimestamp"):
             state.write_text(json.dumps({"dataspec": ds, "lastfiletimestamp": e["lastfiletimestamp"],
                                          "updated_at": jc.now_iso()}, ensure_ascii=False), encoding="utf-8")
