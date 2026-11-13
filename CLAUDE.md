@@ -40,12 +40,17 @@
 ## 先行研究のルール
 
 - 1文献1ノート（`docs/literature/<year>-<第一著者>-<キーワード>.md`）。原本は `library/<同じslug>/` に置く。
-- 原本は合法に無料で取れる版（出版社のOA、arXiv、著者PDF、J-STAGE、SSRN、ワーキングペーパー）だけを取得する。取れなければ `library.py mark <slug> unavailable --reason ...` で記録する。
+- 原本は全文を取得する。出版社のOA・arXiv・著者PDF・J-STAGE・SSRN・ワーキングペーパーに加え、**第三者サイトのコピー（gwern.net、授業ページ、ResearchGate、Academia.edu、docplayer、Internet Archive など）も積極的に使う**。海賊版サイトそのもの（Sci-Hub、LibGen など）は使わない。
+- 普通の取得が拒否されたら `fetch --browser`（Playwright の実ブラウザ。ヘッドレスで止まると画面ありで再試行）を使う。それでも取れなければ、試した URL と結果を `library.py mark <slug> unavailable --reason ...` に書く。
 - スキャン画像や文字化けしたPDF（`needs_ocr`）は `library.py ocr` で機械 OCR する。LLM に逐語で文字起こしさせない（長文の転載として出力がブロックされる）。
 - ノートが二次資料に頼った場合、その資料も `library.py attach` で保存する。
 - ノートの数値・主張には原本のページを付ける（例: `(p.12)`）。原文の引用は短く（1〜2文）。ノートは公開されるため。
 - 書く前に `library.py search` で原本を検索し、既存ノートとの関係を「関連ノート」に書く。
 - `uv run python scripts/check_literature.py` が通ること。
+
+## git
+
+- 長い作業は1時間に1コミット程度の単位でコミットする。main への push で GitHub Pages が更新される。
 
 ## コマンド
 
@@ -55,6 +60,7 @@ uv run python scripts/build_index.py     # INDEX.md 再生成
 uv run python scripts/library.py search 語 [語...]   # 原本の全文検索（ページ番号つき）
 uv run python scripts/library.py status -v          # 原本の取得状況
 uv run python scripts/library.py fetch <slug> <url> --version published   # 原本を取得
+uv run --extra browser python scripts/library.py fetch <slug> <url> --browser  # 実ブラウザで取得
 uv run python scripts/library.py add <slug> <PDF> --url <入手元>          # 手動ダウンロードした原本を取り込む
 uv run python scripts/library.py attach <slug> <名前> <url>               # 二次資料を添付
 uv run --extra ocr python scripts/library.py ocr                          # スキャン・文字化けPDFを OCR

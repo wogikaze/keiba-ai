@@ -7,6 +7,7 @@ library/<ノートのslug>/
 
 使い方:
   uv run python scripts/library.py fetch <slug> <url> [--kind pdf|html]
+  uv run --extra browser python scripts/library.py fetch <slug> <url> --browser   # 自動取得が拒否されるとき
   uv run python scripts/library.py add <slug> <手元のPDF> --url <入手元> --version published  # 手動DLした原本
   uv run python scripts/library.py extract <slug>        # 原本から source.txt を作り直す
   uv run --extra ocr python scripts/library.py ocr [<slug>]   # スキャン画像PDFを OCR
@@ -22,6 +23,7 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -211,15 +213,97 @@ def ocr_pdf(pdf: Path, dpi: int = 200) -> tuple[str, dict]:
 
 # ---------- コマンド ----------
 
+BLOCK_MARKERS = ("just a moment", "access denied", "attention required", "are you a robot", "captcha",
+                 "verify you are human", "request unsuccessful", "enable javascript and cookies")
+
+
+def browser_get(url: str, wait_s: float = 8.0, headed: bool = False) -> tuple[bytes, str, str]:
+    """実ブラウザ（Playwright + Chrome）で URL を開き、PDF か本文 HTML を返す。
+
+    PDF の応答・ダウンロードを捕まえる。ボット確認ページが出たら少し待って再読込する。
+    """
+    from playwright.sync_api import sync_playwright
+
+    pdfs: list[tuple[bytes, str]] = []
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.launch(channel="chrome", headless=not headed)
+        except Exception:
+            browser = p.chromium.launch(headless=not headed)
+        ctx = browser.new_context(accept_downloads=True, locale="en-US")
+        page = ctx.new_page()
+
+        def on_response(resp):
+            try:
+                if "application/pdf" in (resp.headers.get("content-type") or ""):
+                    pdfs.append((resp.body(), resp.url))
+            except Exception:
+                pass
+
+        page.on("response", on_response)
+        try:
+            with page.expect_download(timeout=int(wait_s * 1000) + 30000) as dl_info:
+                try:
+                    page.goto(url, wait_until="load", timeout=60000)
+                except Exception:
+                    pass
+                for _ in range(3):
+                    page.wait_for_timeout(wait_s * 1000)
+                    if pdfs:
+                        break
+                    title = (page.title() or "").lower()
+                    text = (page.inner_text("body") or "").lower()[:2000] if page.query_selector("body") else ""
+                    if not any(m in title or m in text for m in BLOCK_MARKERS):
+                        break
+                if not pdfs:
+                    # PDF 直リンクがビューアで開かれた場合などは、同じ Cookie で取り直す
+                    r = ctx.request.get(url, timeout=60000)
+                    if r.body()[:5] == b"%PDF-":
+                        pdfs.append((r.body(), r.url))
+                if pdfs:
+                    raise _Done()
+                html = page.content()
+                final = page.url
+                raise _Done()
+            body = dl_info.value.path().read_bytes()
+            browser.close()
+            return body, "download", dl_info.value.url
+        except _Done:
+            pass
+        except Exception:
+            pass
+        browser.close()
+    if pdfs:
+        return pdfs[-1][0], "application/pdf", pdfs[-1][1]
+    low = html.lower()
+    if any(m in low[:5000] for m in BLOCK_MARKERS):
+        raise RuntimeError("ボット確認ページから進めなかった")
+    return html.encode("utf-8"), "text/html (browser)", final
+
+
+class _Done(Exception):
+    pass
+
+
 def cmd_fetch(a) -> None:
     note_path(a.slug)
     d = LIB / a.slug
     d.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(a.url, headers={"User-Agent": UA, "Accept": "application/pdf,text/html;q=0.9,*/*;q=0.8"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        body = r.read()
-        ctype = r.headers.get("Content-Type", "")
-        final_url = r.geturl()
+    if a.browser:
+        try:
+            body, ctype, final_url = browser_get(a.url, headed=a.headed)
+        except RuntimeError:
+            if a.headed or not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+                raise
+            # ヘッドレスはボット確認で止まりやすい。画面ありで再試行する（WSLg などで表示される）
+            print("  ヘッドレスで止まったので画面ありで再試行", file=sys.stderr)
+            body, ctype, final_url = browser_get(a.url, headed=True)
+    else:
+        req = urllib.request.Request(a.url, headers={"User-Agent": UA, "Accept": "application/pdf,text/html;q=0.9,*/*;q=0.8"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            body = r.read()
+            ctype = r.headers.get("Content-Type", "")
+            final_url = r.geturl()
     kind = a.kind or ("pdf" if body[:5] == b"%PDF-" else "html")
     if a.kind == "pdf" and body[:5] != b"%PDF-":
         sys.exit(f"PDF ではない応答（Content-Type: {ctype}）。ログインページや要約ページの可能性。")
@@ -237,6 +321,7 @@ def cmd_fetch(a) -> None:
         "bytes": len(body),
         "sha256": hashlib.sha256(body).hexdigest(),
         "fetched_at": now(),
+        "fetched_with": "playwright" if a.browser else "urllib",
         **info,
     }
     if a.version:
@@ -393,6 +478,8 @@ def main() -> None:
     f.add_argument("url")
     f.add_argument("--kind", choices=["pdf", "html"])
     f.add_argument("--version", help="例: published / accepted-manuscript / preprint / working-paper")
+    f.add_argument("--browser", action="store_true", help="実ブラウザ（Playwright）で取得する。要 uv sync --extra browser")
+    f.add_argument("--headed", action="store_true", help="--browser で画面を表示する（WSLg など）")
     f.set_defaults(func=cmd_fetch)
     ad = sub.add_parser("add", help="手動ダウンロードしたファイルを原本として取り込む")
     ad.add_argument("slug")
