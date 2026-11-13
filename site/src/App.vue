@@ -2,6 +2,7 @@
 const nav = [
   { to: '/literature', label: '先行研究' },
   { to: '/ideas', label: 'アイデア' },
+  { to: '/data', label: 'データ' },
   { to: '/adr', label: 'ADR' },
   { to: '/experiments', label: '実験' },
 ]
