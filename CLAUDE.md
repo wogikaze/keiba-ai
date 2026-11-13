@@ -46,6 +46,7 @@
 - ノートが二次資料に頼った場合、その資料も `library.py attach` で保存する。
 - ノートの数値・主張には原本のページを付ける（例: `(p.12)`）。原文の引用は短く（1〜2文）。ノートは公開されるため。
 - 書く前に `library.py search` で原本を検索し、既存ノートとの関係を「関連ノート」に書く。
+- 個人の開発記録・大会参加記（ブログ、Qiita、Zenn、note、GitHub）も同じ形式で集める。`topic: practitioner`、tags に `grey-literature`、slug の著者はハンドル名、`source_version: web`。回収率は「どのオッズで、どう計算したか」まで書く。
 - `uv run python scripts/check_literature.py` が通ること。
 
 ## git

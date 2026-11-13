@@ -107,7 +107,10 @@ def extract_html(html: Path) -> tuple[str, dict]:
     soup = BeautifulSoup(html.read_bytes(), "html.parser")
     for tag in soup(["script", "style", "nav", "header", "footer", "aside", "noscript", "form"]):
         tag.decompose()
-    root = soup.find("article") or soup.find("main") or soup.body or soup
+    # はてなブログは本文の前に広告用の <article> を置くことがあるので、最も長い article を本文とみなす
+    articles = soup.find_all("article")
+    root = (max(articles, key=lambda a: len(a.get_text(strip=True))) if articles else None) \
+        or soup.find("main") or soup.body or soup
     lines = []
     for el in root.find_all(["h1", "h2", "h3", "h4", "p", "li", "td", "th", "pre", "blockquote", "figcaption"]):
         if el.find_parent(["p", "li", "td", "th", "pre", "blockquote"]) is not None and el.name != "pre":

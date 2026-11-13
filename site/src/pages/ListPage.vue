@@ -11,6 +11,7 @@ const TOPIC_LABELS: Record<string, string> = {
   japan: '日本の競馬',
   'betting-strategy': '馬券戦略・資金管理',
   'evaluation-and-features': '評価方法・特徴量',
+  practitioner: '個人の開発記録・大会',
 }
 const IMPORTANCE_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 }
 
