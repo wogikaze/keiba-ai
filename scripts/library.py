@@ -118,7 +118,12 @@ def extract_html(html: Path) -> tuple[str, dict]:
         prefix = "#" * int(el.name[1]) + " " if el.name in {"h1", "h2", "h3", "h4"} else ""
         lines.append(prefix + text)
     text = "\n\n".join(lines)
-    return text + "\n", {"chars": len(text), "method": "beautifulsoup", "needs_ocr": False}
+    method = "beautifulsoup"
+    # p/li などで組まれていないページ（Scribd のビューアなど）は、本文テキストをそのまま取る
+    full = "\n".join(l.strip() for l in root.get_text("\n").splitlines() if l.strip())
+    if len(text) < 0.3 * len(full):
+        text, method = full, "beautifulsoup (get_text fallback)"
+    return text + "\n", {"chars": len(text), "method": method, "needs_ocr": False}
 
 
 def extract(d: Path) -> dict:
@@ -326,6 +331,10 @@ def cmd_fetch(a) -> None:
     }
     if a.version:
         meta["version"] = a.version
+    # 添付（二次資料）の記録は引き継ぐ
+    old_meta = load_meta(d)
+    if old_meta.get("attachments"):
+        meta["attachments"] = old_meta["attachments"]
     save_meta(d, meta)
     warn = "  ※スキャン画像か文字化けの可能性: library.py ocr で OCR する" if info.get("needs_ocr") else ""
     print(f"ok {a.slug}: {kind} {len(body):,} bytes, {info.get('pages', '-')} pages, {info.get('chars'):,} chars{warn}")

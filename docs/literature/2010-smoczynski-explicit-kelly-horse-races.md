@@ -7,71 +7,96 @@ url: https://www.researchgate.net/publication/268615950_An_explicit_solution_to_
 doi:
 topic: betting-strategy
 tags: kelly, win-bet, kkt, closed-form, takeout
-verified: abstract
+verified: fulltext
 importance: high
-source: unavailable
+source: downloaded
+source_version: accepted-manuscript
 ---
 
 # 単勝の複数頭買いの Kelly 解：賭ける馬の集合を決めれば配分は閉形式
 
-**原本未取得**。The Mathematical Scientist（Applied Probability Trust）は有料で、ResearchGate に全文はなく、著者ページやリポジトリの版も見つからなかった。本ノートは、本論文を引用・再現した論文（[Whelan 2025](./2025-whelan-multiple-mutually-exclusive-outcomes.md) の改訂稿、[Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md)、[Deza 2015](./2015-deza-chance-constrained-parimutuel.md)、[Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md)）の記述に基づく。式の正確な形と記号は原本で確認していない。
+原本は著者が ResearchGate に上げた原稿（2019年1月アップロード、12ページ + RG の表紙）を Internet Archive の保存版から取得した。誌面（pp.10-17）ではなく著者の組版なので、版は accepted-manuscript とした（誌面との異同は未確認）。ページは PDF のページ（p.1 は RG の表紙、本文は p.2-13）。
 
-> 一言で: 控除率のある単勝で、複数の馬に同時に賭けるときの期待対数資金の最大化（Kelly）を KKT 条件で解いた。賭ける馬の集合 $S$ が決まれば各馬への賭け額は閉形式で書け、$S$ は「勝率/価格」の大きい順に馬を加えていく反復で決まる。1頭だけなら通常の Kelly に一致する。
+> 一言で: 控除率のある単勝で、複数の馬に同時に賭けるときの期待対数資金の最大化（Kelly）を KKT 条件で解いた。賭ける馬の集合 $S$ が決まれば配分は $f_i=\pi_i-\beta_i R(S)/D$ と閉形式で書け、$S$ は「期待払戻率」の大きい順に、それが留保率 $R$ を超える限り馬を加えるだけで決まる (p.9-10)。
 
-## 問題
+## 原本で確認・訂正した点
 
-$n$ 頭のレース。馬 $h$ の勝率 $\pi_h$、小数オッズ $O_h$（固定と仮定）、資金 $w$、賭け額 $x_h \ge 0$、$\sum x_h \le w$ のもとで
+旧ノートは [Whelan 2025](./2025-whelan-multiple-mutually-exclusive-outcomes.md) などの再記述に頼り、式の形を「1頭のとき Kelly に一致する」ことから再構成していた。原本の式 (6.5)・(6.8) と照合し、再構成した形は（記号の違いを除き）**正しかった**。
 
-$\max_x \sum_h \pi_h \log\big(x_h O_h + w - \sum_i x_i\big)$
+- 旧ノートの $p_i=1/O_i$ と原本の $\beta_i$ の関係は $\beta_i=D\,p_i$（$\beta_i$ は単勝票数のシェア、$D=1-$控除率）(p.4, 式2.1-2.2)。
+- 旧ノートは「1ドル払戻の賭けの数」で書いていたが、原本は資金に対する**賭け額の割合** $f_i$ で書く。
+- 実データでの検証はない。数値例2つだけ (p.11-12)。
+- 一意性や「全額を賭ける解は劣る」ことの証明は省略されている (p.8, 10)。
 
-を解く（[Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md) p.3 の問題 (P) の記述。Metel は「厳密な最適解は Smoczynski と Tomkins のアルゴリズムで求まる」とする）。
-[Deza 2015](./2015-deza-chance-constrained-parimutuel.md) は本論文を「KKT 条件を使って最適な単勝の賭けを求める簡単な手順を導いた」と紹介する (Deza p.1)。
+## モデル
 
-## 解の形（Whelan 2025 による再記述）
+$n$ 頭のレースが同じ条件で無限に繰り返される。馬 $k$ の真の勝率 $\pi_k$、単勝票数のシェア $\beta_k=b_k/\sum_m b_m$、配当率 $D=1-tt$（$tt$ は控除率。北米で 0.80〜0.85）(p.3-4)。
 
-価格 $p_i = 1/O_i$ として、賭ける馬の集合を $S$ とすると、各馬への賭け（1ドル払戻の賭けの数）は
+- 払戻率: $r_k=D/\beta_k=Q_k+1$（$Q_k$ はオッズ）(p.4, 式2.2)
+- 期待払戻率: $er_k=D\pi_k/\beta_k=\pi_k(Q_k+1)$ (p.4, 式2.3)
+- 目的関数: $L(f)=\sum_k \pi_k\ln\big(1-\sum_m f_m+D f_k/\beta_k\big)$ (p.5, 式3.1)
+- 制約: $f_m\ge0$（レイなし）、$\sum f_m\le1$（借入なし）(p.6, 式3.2)
 
-$x_i = w\Big(\dfrac{\pi_i}{p_i} - \dfrac{1 - \sum_{k\in S}\pi_k}{1 - \sum_{k\in S}p_k}\Big)$
+自分の賭けが $\beta$ を変えない（少額）ことを仮定する (p.4)。
 
-の形になる（Whelan p.10, 式19。抽出テキストが崩れていたため、1頭のとき Kelly に一致することから再構成した）。右辺の第2項は「$S$ 以外の馬が勝つ確率」と「$S$ 以外の馬の価格の和」の比で、Kelly の「留保率（reserve rate）」に当たる。
+## 解
 
-- 馬 $i$ に正の額を賭けるための条件は $\pi_i/p_i$ が一定の閾値を超えること（Whelan p.10, 式20）。
-- 集合 $S$ を決める手順: $\pi_i/p_i$（期待払戻率）が最大の馬から始め、条件を満たす限り次の馬を加え、満たさない最初の馬で止める（Whelan p.10）。
-- 式自体は $S$ を決めないので、この反復が必要（Whelan p.10）。
-- 期待対数成長の最大値の式も与える（ResearchGate の要旨による）。
-- 論文には2つの数値例があり、Whelan の Matlab コード（fmincon の内点法）で同じ答えが再現された（Whelan p.11）。
+KKT 条件 (p.8, 式5.1-5.5) を解くと、賭ける集合 $S$ について
 
-控除率があると全馬の価格の和が1を超えるので、全馬に賭けることはなく、少なくとも1頭は賭けない集合の外に残る。これは Whelan が一般の凹効用で示した一意性の条件と同じ構造である（Whelan p.9-10）。
+$$f_i^{opt}=\pi_i-\beta_i\frac{\sum_{k\notin S}\pi_k}{D-\sum_{k\in S}\beta_k}\quad(i\in S),\qquad f_j^{opt}=0\quad(j\notin S)$$
 
-## 位置づけ
+(p.9, 式6.5)。賭けずに残す割合（留保率）は
 
-- [Isaacs 1953](./1953-isaacs-optimal-horse-race-bets.md) が期待利益最大化で単勝の最適な組み合わせを閉形式で与えたのに対し、本論文は対数効用（Kelly）で同じことをした。
-- 複数頭への同時の賭けを、各馬独立の Kelly ではなく一体で最適化する点が要。Whelan は、独立に扱う2択ルールより同時最適のほうが賭け額が大きくなり、期待値がわずかに負の馬も買うことを示した。
-- 後続研究はこの解を出発点にしている: 確率の推定誤差（[Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md)）、機会制約と4連単（[Deza 2015](./2015-deza-chance-constrained-parimutuel.md)）、相互排他でない複数券種（[Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md)）、CRRA 効用（[Whelan 2025](./2025-whelan-multiple-mutually-exclusive-outcomes.md)）。
+$$R(S)=1-\sum_{m\in S}f_m=\frac{D\sum_{k\notin S}\pi_k}{D-\sum_{k\in S}\beta_k},\quad R(\emptyset)=1$$
 
-## 批判的に読む（原本未読のため限定的）
+(p.9, 式6.8)。$f_i=\pi_i-\beta_i R(S)/D$ と書ける。最大対数成長率は
 
-- オッズを固定とみなす。パリミュチュエルでは自分の賭けでオッズが下がるが、その効果は入らない（Metel の問題設定からの推測）。
-- 勝率 $\pi$ を既知とする。推定誤差を入れると過大賭けになる（Metel が指摘し、本論文の解を出発点に改良した）。
-- 実データでの検証があるかは未確認。
+$$L(f^{opt})=\sum_{k\in S}\pi_k\ln\frac{D\pi_k}{\beta_k}+\Big(\sum_{k\notin S}\pi_k\Big)\ln R(S)$$
+
+(p.10, 式6.9)。$S$ の条件は「$S$ の中の馬は $er_i>R(S)$、外の馬は $er_j\le R(S)$」(p.9, 式6.7)。
+
+## アルゴリズム（p.10）
+
+1. 各馬の $er_i$ を計算する。
+2. $er_i$ の降順に並べ替える。
+3. $S=\emptyset$、$R=1$ とする。
+4. 次の馬が $er_i>R$ なら $S$ に加えて $R$ を式 (6.8) で再計算する。そうでなければ止める。
+
+止まったときの $S$ が唯一の最適集合（空なら賭けない）。
+
+## 数値例
+
+| 例 | $D$ | 頭数 | 賭ける馬 | 配分 $f$ | $L(f^{opt})$ |
+|---|---|---|---|---|---|
+| 1 (p.11) | 0.80 | 7 | 7, 5 | 0.4870, 0.0974 | 0.2964 |
+| 2 (p.12, Enns & Tomkins 1993 の例) | 0.85 | 5 | 3, 2, 4, 1 | 0.1477, 0.06591, 0.07955, 0.1955 | 0.08736 |
+
+例1では馬6の $er_6=0.4156$ が $R(\{7,5\})=0.4156$ と等しく、集合に入らない (p.11)。例2では **$er=1.0$（期待利益ゼロ）の馬4にも資金の約2割を賭けている** (p.12)。期待値がプラスでなくても、他の馬が負けたときの保険として入る。これが「各馬独立の Kelly」との違いの核心である。
+
+## 批判的に読む
+
+- 確率 $\pi$ を既知として扱う。推定誤差を入れると過大な賭けになる（[Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md) が後に扱う）。
+- 少額の仮定で、自分の賭けによるオッズの変化を無視する (p.4)。パリミュチュエルで大口になると成り立たない。
+- 確定オッズを使う前提。実際は締切前のオッズで賭けるので、$\beta$ の不確実性が残る。
+- 証明の一部（一意性、$\sum f=1$ の解が劣ること）が省略されている (p.8, 10)。結論は凸最適化の一般論と Whelan の再現で裏づけられているが、原本だけでは完結しない。
+- 実データによる検証・回収率の計算はない。
 
 ## keiba-ai での使い方
 
-- **単勝 Kelly の基準実装**: 汎用ソルバを使わず、$\pi_i/p_i$ の降順ソートと累積和だけで解ける。1レース数マイクロ秒で、全レースのバックテストや、確率を何千回もサンプリングする実験（[Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md) の Emc 型）の内側ループに使える。CVXPY で解いた結果と一致するかを単体テストにする。
-- **単勝オッズと確率の入れ方**: $p_i$ は確定オッズの逆数（控除率込みなので $\sum p_i > 1$）、$\pi_i$ はモデルの勝率。fractional Kelly にするなら得られた $x$ を一律に縮めるか、[Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md) の定義を使う。
-- **実験案**: 仮説「同じレースの複数馬を同時最適化した単勝 Kelly は、各馬独立の Kelly より1レースあたりの賭け総額が大きく、モデルのずれが誤差主体なら評価期間の対数成長率は低い」（[Whelan 2025](./2025-whelan-multiple-mutually-exclusive-outcomes.md) の予測の検証）。
-- 原本が手に入ったら、式の記号と2つの数値例をここに追記し、実装のテストケースにする。
+- **単勝 Kelly の基準実装**: 降順ソートと累積和だけで解ける。$\beta_k$ は単勝オッズから $\beta_k=D/(Q_k+1)$ で戻せる（JRA の単勝は $D=0.80$）。数値例2つ（p.11-12）をそのまま単体テストにし、CVXPY の解とも突き合わせる。
+- **確率をサンプリングする実験の内側ループ**: 1レースあたりの計算が軽いので、[Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md) 型の不確実性込みの評価に使える。
+- **実験案（仮説）**: 「同時最適化した単勝 Kelly は、各馬独立の Kelly より1レースの賭け総額が大きく、$er\le1$ の馬も含む。モデルの勝率が過信気味なら、評価期間の対数成長率は独立 Kelly や fractional Kelly より低い」。時系列分割のテスト期間で、実際の確定オッズ・控除率込みで比べる。
 
 ## 関連ノート
 
-- [Whelan 2025](./2025-whelan-multiple-mutually-exclusive-outcomes.md): 本論文の解を再現し、CRRA 効用へ拡張。本ノートの主な情報源。
+- [Whelan 2025](./2025-whelan-multiple-mutually-exclusive-outcomes.md): 本論文の解を再現し、CRRA 効用へ拡張。旧ノートの情報源で、再記述は原本と一致した。
 - [Metel 2017](./2017-metel-kelly-horse-races-uncertainty.md): 本論文の問題に確率の推定誤差を入れた。
 - [Deza 2015](./2015-deza-chance-constrained-parimutuel.md): 本論文を引用し、4連単と機会制約に進む。
 - [Jacot 2023](./2023-jacot-kelly-non-mutually-exclusive-bets.md): 相互排他でない複数券種への拡張。
-- [Isaacs 1953](./1953-isaacs-optimal-horse-race-bets.md): 期待利益最大化での最適な単勝の組み合わせ。
-- [Kelly 1956](./1956-kelly-information-rate.md): 1頭の場合に一致する元の基準。
+- [Isaacs 1953](./1953-isaacs-optimal-horse-race-bets.md): 期待利益最大化での最適な単勝の組み合わせ。本論文は対数効用版。
+- [Kelly 1956](./1956-kelly-information-rate.md): 本論文が「不完全な解」とした元の問題 (p.2)。
 - [Hausch 1981](./1981-hausch-racetrack-market-efficiency.md): 複勝・3着内での Kelly の古典的な実証。
 
 ## 検索語
 
-単勝, 複数頭買い, 同時最適化, ケリー基準, KKT条件, 閉形式解, 明示解, 能動集合, 留保率, 期待払戻率, 控除率, 資金配分, win bet, Kelly criterion, explicit solution, closed form, Karush-Kuhn-Tucker, active set, reserve rate, takeout, multiple horses, optimal allocation, log utility, Mathematical Scientist
+単勝, 複数頭買い, 同時最適化, ケリー基準, KKT条件, 閉形式解, 明示解, 能動集合, 留保率, 期待払戻率, 控除率, 配当率, 資金配分, 保険的な賭け, win bet, Kelly criterion, explicit solution, closed form, Karush-Kuhn-Tucker, active set, reserve rate, expected revenue rate, dividend rate, takeout, track take, multiple horses, optimal allocation, log utility, Mathematical Scientist, Enns Tomkins

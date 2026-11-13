@@ -6,59 +6,98 @@ venue: IMA Journal of Management Mathematics 31(1) 33-48
 url: https://academic.oup.com/imaman/article-abstract/31/1/33/5308454
 doi: 10.1093/imaman/dpz001
 topic: probability-models
-tags: order-statistics, ranking-model, gamma-model, thurstone, plackett-luce, computation, numerical-integration, pareto
-verified: abstract
+tags: order-statistics, ranking-model, gamma-model, thurstone, plackett-luce, computation, numerical-integration, pareto, exponentiated-exponential
+verified: fulltext
 importance: medium
-source: unavailable
+source: downloaded
 source_version: accepted-manuscript
 ---
 
-# 順序統計量に基づく新しい順位モデル（指数化指数分布・Pareto）と着順確率の高速計算
+# 順序統計量に基づく新しい順位モデル（指数化指数分布・Lomax）と着順確率の高速計算
 
-**原本未取得。** OUP 版は購読制。著者最終稿は Salford 大学のリポジトリ（eprint 49762）にあるが、Cloudflare のボット検査で取得できなかった。arXiv 版はなく、ResearchGate にも全文はない。本ノートは要旨・キーワード・書誌情報（OpenAlex、検索結果）に基づく。数値・式の詳細は未確認。
+原本は Salford 大学リポジトリ（USIR eprint 49762）の著者最終稿（2019年1月14日付、31ページ）を Internet Archive の保存版から取得した。ページ番号は PDF のページ（1ページ目はリポジトリの表紙）。出版版とは組版とページが異なる。
 
-> 一言で: 「各競技者のパフォーマンスがある分布に従い、その順序統計量で着順が決まる」という Thurstone 型の順位モデルに、指数化指数分布と Pareto 分布に基づく2つの新しいモデル族を加え、多人数の着順確率を速く正確に数値計算する方法を示した（要旨より）。2019年2月にオンライン公開、2020年の巻号に収録。
+> 一言で: 着順確率 $p_{12\cdots n}$ は「反復積分」なので、後ろの競技者から生存関数を1本ずつ積分していけば $n$ に対して線形の手間で計算できる。これで gamma・Thurstone–Mosteller と新しい2族（指数化指数 EE、Lomax）を多人数データに当てはめられるようになり、ゴルフとテニスでは Plackett–Luce より当てはまりが良かった。
 
-## 位置づけ
+## 原本で確認・訂正した点
 
-着順の確率モデルは大きく2系統ある。
+旧ノートは要旨だけに基づいていた。原本を読んで次を確認・訂正した。
 
-| 系統 | 例 | 着順確率の計算 |
+- 新しい族の一方は「Pareto」と要旨にあるが、実体は一般化 Pareto の特殊形 **Lomax** 分布 $S(x)=(1+\alpha x)^{-\nu}$ である (p.10)。
+- gamma モデルの由来は Henery (1983) と Stern (1990)。旧ノートの関連ノート欄で Henery を「正規」だけに結びつけていたが、本論文が対象にする gamma モデルは Henery 1983 である (p.8)。正規版は Thurstone–Mosteller V 型として扱われる。
+- 実証はゴルフ（男子メジャー）と女子テニスのみで、**競馬データの適用はない**。競馬は Stern (1990a) の結果の引用として出てくるだけ (p.9)。
+- 計算速度の具体値: $n=20$ で 1.4 ミリ秒、$n=80$ で 157 ミリ秒（デスクトップ PC）(p.19)。
+
+## モデル
+
+競技者 $i$ の「タイム」$x_i$ が密度 $f_i(x_i\mid\alpha_i)$ に従い、小さい順に着順が決まる。着順 $1,2,\dots,n$ の確率は
+
+$$p_{12\cdots n}=\int_0^\infty f_1(x_1)\,dx_1\int_{x_1}^\infty f_2(x_2)\,dx_2\cdots\int_{x_{n-1}}^\infty f_n(x_n)\,dx_n$$
+
+(p.6, 式1)。時間軸の単調変換で確率は変わらないので、指数・Weibull・Gumbel は同じ確率を与え、強さの比だけが効く (p.6)。共変量は $\alpha_i\propto\exp(\lambda^\top z_i)$ で入れられる (p.6)。
+
+| 分布 | モデル | 備考 |
 |---|---|---|
-| 逐次選択（Luce 型） | Plackett–Luce、Harville | 閉じた式（積） |
-| 順序統計量（Thurstone 型） | Henery（正規）、Stern（gamma）、Thurstone–Mosteller V 型 | 1次元・多次元の数値積分 |
+| 指数 | Plackett–Luce (PL) | 閉じた式 (p.6) |
+| gamma（形状 $\beta$） | Henery 1983 / Stern 1990 | $\beta=1$ で PL、$\beta\to\infty$ で対数正規 = TM (p.7-8) |
+| 正規 | Thurstone–Mosteller V 型 (TM) | $n=2$ なら $\Phi(\ln(\alpha_1/\alpha_2)/\sqrt2)$ (p.9) |
+| 指数化指数 (EE) | 新 | $F(x)=(1-e^{-\alpha x})^\beta$、$\beta=1$ で PL (p.10) |
+| Lomax | 新 | $S(x)=(1+\alpha x)^{-\nu}$、指数より裾が重い (p.10) |
 
-Plackett–Luce はパフォーマンスが Gumbel（極値）分布のときの順序統計量モデルと一致する（Yellott の結果、[Guiver 2009](./2009-guiver-bayesian-plackett-luce.md) 参照）。それ以外の分布では、$n$ 人の着順確率は $n-1$ 重の積分になり、多人数では計算が重い。要旨によれば、Henery の gamma モデルや Thurstone–Mosteller V 型のような順序統計量モデルは、競技者の強さの推定に有用だが、計算が遅いことが実用の障害になっており、高速化が強く求められている。
+$\beta>1$ が効く理由の説明が競馬に直結する。$y=x^\beta$ と書き直すと「成績が悪い側の裾」が指数分布より長くなり、「普段強い馬がときどき大きく負ける」ことを表せる。Stern (1990a) は競馬で $\beta=2$ が PL より当てはまると報告した (p.9)。
 
-## 本論文の貢献（要旨・キーワードから分かる範囲）
+2人の場合、EE モデルは $\beta=2$ で $p_{12}=r^2(2r+7)/\{(r+1)(r+2)(2r+1)\}$（$r=\alpha_1/\alpha_2$）と閉じた式になる (p.11)。
 
-1. **新しい分布族**: 指数化指数分布（exponentiated exponential、Gupta–Kundu 型。$F(x)=(1-e^{-\lambda x})^\alpha$）と Pareto 分布から、2つの順位モデル族を導く。形状パラメータで分布の裾や歪みを変えられるので、Luce 型より柔軟なモデルになると考えられる（推測）。
-2. **高速計算**: 順序統計量モデルの着順確率を精度を保って速く計算する数値積分法を与える（キーワード: numerical integration）。
-3. **実証**: 検索結果によれば、Baker and McHale (2015) のゴルフデータと Baker and McHale (2017) の女子テニスデータで複数のモデルを比較している。競馬データへの適用があるかは未確認。
+## アルゴリズム（$n$ 人の着順確率）
 
-どのモデルが当てはまりで勝ったか、計算速度がどれだけ改善したかは未確認。
+1. $S_n(x)=\int_x^\infty f_n(u)\,du$ を全格子点で計算する。
+2. $i=n-1$ から 1 まで $S_i(x)=\int_x^\infty f_i(u)S_{i+1}(u)\,du$ を計算する。
+3. $p_{12\cdots n}=S_1(0)$ (p.14)。
 
-## 批判的に読む（原本未取得のため限定的）
+実装上の工夫:
 
-- 新しい分布族が Plackett–Luce より予測で優れるかは、データ（ゴルフ・テニス）と評価指標しだい。競馬の着順に当てはまるかは自分で確かめる必要がある。
-- 数値積分の高速化は、頭数が多い競馬（JRA は最大18頭）でこそ効くが、3連単の全組み合わせ（18頭で 4,896 通り）を毎レース計算する速度が実用的かは未確認。
+- 変数変換で積分区間を $[0,1]$ に写し、両端で密度が 0 になるようにする（gamma・EE は $x=-\ln(1-z^\gamma)/\alpha_0$、$\alpha_0$ は最小の $\alpha_i$ の半分、$\gamma=3/\beta$）(p.16, 18)。
+- 台形則で $O(h^2)$、格子を倍にして Richardson 外挿で $O(h^4)$。2回目の外挿は不安定なので推奨しない (p.15, 18)。
+- 格子数の経験則 $N=200\exp(n/18)$ で $n\approx70$〜80 まで許容誤差 (p.19)。手間は $Nn$。
+- 下位が順位なし（ゴルフの予選落ち）は $\prod S_i(x)$ を掛けるだけ (p.20-21)。
+- 同着は反復積分にならないので、同着した $\alpha_i$ を平均で置き換える Efron (1977) 型の近似を使う (p.22)。
+- 対数尤度の微分は「$\beta\to\beta+1$ にした積分」で書け、$n$ 個の偏微分に $n+1$ 回の積分が要る (p.21)。
+
+Monte Carlo との比較（Figure 1, p.4）では、多次元積分は約10人まで Monte Carlo より速いが、どちらも多人数では実用にならず、新手法だけが実行可能とされる。ただし著者自身、ブックメーカーや賭け手が必要とするのは「勝つ」「上位10位に入る」のような確率の大きい事象で、それなら Monte Carlo で十分だと断っている (p.13)。
+
+## 実証
+
+| データ | 規模 | 結果 |
+|---|---|---|
+| 男子ゴルフ 4大メジャー（Baker & McHale 2015 の再分析） | 279試合、822人、1試合最大46人 (p.24) | 3族とも PL より有意に良い。Lomax は最大で対数尤度 +28（$\chi^2=56$）。EE（$\beta$ 大）が最良、gamma も良い (p.25-26) |
+| 女子テニス 4大大会 1968–2016 | 20,552試合、85,132セット (p.27) | TM が最良で Bradley–Terry から対数尤度 +65.5。ただし1セットあたりの予測確率の改善は約 0.0004 (p.27) |
+
+テニスの結果について著者は「ペア比較モデルはどれも似た振る舞いをする」という Stern (1992) の結論を裏づけるとしている (p.27)。Lomax は両データで振るわなかった (p.28)。
+
+## 批判的に読む
+
+- **評価は当てはまり（対数尤度）だけ**。ホールドアウトでの予測精度や時系列分割の検証はない。著者も「本当に重要なのは予測順位の正確さ」と認めつつ、最良当てはまりのモデルが最良予測を与えるはずという一般論で済ませている (p.28)。
+- 大量パラメータの最尤推定で、プロファイル尤度の曲線が粗い（計算が重く「時間単位」かかった）(p.24-25)。
+- テニスでは統計的に有意でも実用上の差はごく小さい。データ量が多いと有意性はすぐ出るので、効果量で判断する必要がある。
+- 競馬での検証はない。競馬で $\beta>1$ が良いという根拠は Stern (1990a) の引用のみ。
 
 ## keiba-ai での使い方
 
-- **走破時間モデルの候補を広げる**: 着順確率を Plackett–Luce（Gumbel）以外の分布で作る選択肢として、Henery（正規）・Stern（gamma）に加えて本論文の族を検討できる。仮説: 下位着順ほどランダムになる競馬の性質（[Benter 2019](./2019-benter-model.md) の $\gamma,\delta<1$）は、裾の重い分布を使う順序統計量モデルの方が自然に表せる。
-- **実装の優先度**: まずは閉じた式の Plackett–Luce と discount 補正で十分かを確かめ、残差（3着の校正のずれなど）が大きい場合にだけ数値積分系モデルを試す。比較指標は3連単の的中組の負の対数尤度と計算時間。
-- 原本が取れたら、計算法の手順と比較表を追記する。
+- **3連単・3連複の確率付け**: 勝率モデル（ロジットなど）から $\alpha_i$ を作り、gamma または EE の着順確率で組み合わせ確率を出す。JRA の最大18頭なら1組み合わせ 1.4 ミリ秒前後と見込め（$n=20$ の値、p.19）、上位3頭だけの確率なら下位を「順位なし」扱いにして計算をさらに軽くできる (p.20-21)。
+- **仮説**: 3着以内の確率の校正（[Benter 2019](./2019-benter-model.md) の $\gamma,\delta$ 補正で扱われる「下位ほどランダム」）は、形状 $\beta>1$ の gamma/EE で近い効果が出る。検証は時系列分割したテストで、Harville（PL）・Benter 補正・gamma($\beta$ 推定)・EE の4つを3連単的中組の負の対数尤度で比べる。
+- 実装の優先度は低め。まず PL + discount 補正で残差を確認し、2着・3着の校正が悪いときにこの計算法を使う。数値積分の実装方針（変数変換 + 台形則 + Richardson 1回）はそのまま流用できる。
 
 ## 関連ノート
 
-- [Henery 1981](./1981-henery-permutation-probabilities.md): 正規分布の順序統計量モデル。
-- [Stern 1990](./1990-stern-gamma-permutations.md): gamma 分布の順序統計量モデル。本論文が高速化の対象に挙げる。
-- [Plackett 1975](./1975-plackett-analysis-of-permutations.md): Gumbel に対応する Luce 型モデル。
-- [Harville 1973](./1973-harville-multi-entry-probabilities.md): 勝率だけから作る Luce 型の着順確率。
-- [Lo 2008](./2008-lo-ordering-probabilities-approximation.md): Henery・Stern を閉じた式で近似する別の道。
+- [Henery 1981](./1981-henery-permutation-probabilities.md): 正規の順序統計量モデル。本論文の TM モデルに相当。
+- [Stern 1990](./1990-stern-gamma-permutations.md): gamma 順位モデルと競馬での $\beta=2$ の当てはまり。本論文が高速化の対象とする。
+- [Plackett 1975](./1975-plackett-analysis-of-permutations.md): 指数（Gumbel）分布に対応する PL モデル。
+- [Harville 1973](./1973-harville-multi-entry-probabilities.md): 勝率だけから作る PL 型の着順確率。
+- [Lo 2008](./2008-lo-ordering-probabilities-approximation.md): Henery・Stern を閉じた式で近似する別の道。数値積分との比較対象。
 - [Glickman 2015](./2015-glickman-stochastic-rank-ordered-logit.md): 順位ロジットの動的拡張。
-- [Guiver 2009](./2009-guiver-bayesian-plackett-luce.md): Gumbel と P-L の対応（Yellott）。
+- [Guiver 2009](./2009-guiver-bayesian-plackett-luce.md): Gumbel と PL の対応（Yellott）。
+- [Benter 2019](./2019-benter-model.md): 下位着順の discount 補正。gamma/EE の代替。
 
 ## 検索語
 
-順序統計量, 順位モデル, 着順確率, Thurstone モデル, Thurstone–Mosteller, Henery モデル, gamma モデル, 指数化指数分布, 一般化指数分布, Pareto 分布, 数値積分, 高速計算, Plackett-Luce, ゴルフ, テニス, order statistics, ranking model, outcome probabilities, exponentiated exponential distribution, generalized exponential, Pareto distribution, numerical integration, Thurstone-Mosteller type V, Henery gamma model, Baker McHale
+順序統計量, 順位モデル, 着順確率, 反復積分, 台形則, Richardson 外挿, Thurstone モデル, Thurstone–Mosteller, Henery gamma モデル, 指数化指数分布, 一般化指数分布, Lomax 分布, Pareto 分布, 数値積分, 高速計算, Plackett-Luce, Bradley-Terry, 予選落ち, 同着, ゴルフ, 女子テニス, order statistics, ranking model, outcome probabilities, iterated integral, exponentiated exponential distribution, Lomax, generalized Pareto, numerical integration, Richardson extrapolation, Thurstone-Mosteller type V, Henery gamma model, Baker McHale, golf majors, women's tennis

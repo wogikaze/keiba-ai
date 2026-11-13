@@ -16,7 +16,7 @@ source: unavailable
 
 > 一言で: 直近 10 走の Beyer スピード指数と休養明けかどうかから次走の指数を重回帰で予測し、同じレースの馬の誤差の相関も入れた多変量正規分布でレースを繰り返しシミュレーションして、各馬の勝率を「最大の指数を出す確率」として推定した。単勝オッズの支持率より尤度が高いことを逐次検定 (SPRT 型) で示した。
 
-**原本未取得**。Omega 掲載版は有料で、無料の著者稿・ワーキングペーパーは見つからなかった。本ノートは、(1) 出版社ページと書誌データベースの要旨、(2) 同じモデルと同じ検証を含む著者の修士論文（E.S. Rosenbloom, *Selecting the Best of K Multinomial Parameter Estimation Procedures Using SPRT*, M.Sc. practicum, University of Manitoba, 1999, MSpace で公開）に基づく。数値は修士論文のもので、Omega 版で変わっている可能性がある（未確認）。以下の出典表示「修論 3章E」などは修士論文の章・節。
+**原本未取得**。Omega 掲載版は有料で、無料の著者稿・ワーキングペーパーは見つからなかった（2026-11 第3ラウンドで Gale OneFile の Google Scholar 経由のリンクも試したが、ボット確認と 403 で取れなかった）。本ノートは、(1) 出版社ページと書誌データベースの要旨、(2) 同じモデルと同じ検証を含む著者の修士論文（E.S. Rosenbloom, *Selecting the Best of K Multinomial Parameter Estimation Procedures Using SPRT*, M.Sc. practicum, University of Manitoba, 1999, MSpace で公開）に基づく。数値は修士論文のもので、Omega 版で変わっている可能性がある（未確認）。以下の出典表示「修論 3章E」などは修士論文の章・節。
 
 ## 背景
 
