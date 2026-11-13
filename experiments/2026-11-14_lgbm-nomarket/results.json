@@ -1,0 +1,9 @@
+{
+  "experiment": "2026-11-14_lgbm-nomarket",
+  "status": "running",
+  "git_hash": null,
+  "data_version": null,
+  "seed": 42,
+  "split": null,
+  "metrics": {}
+}

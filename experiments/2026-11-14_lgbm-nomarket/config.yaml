@@ -1,0 +1,72 @@
+seed: 42
+data:
+  version: auto            # 実行時に features.data_version() を results.json に書く（_build_info.json の hash + 特徴量の版 + 設定の hash）
+  target: win
+  tables: [races, entries, horses, training_slope, training_wood]
+universe:
+  # features.FeatureConfig.not_started_codes と同じ。JRA、中止でないレース、出走した馬
+  exclude_abnormal_codes: [1, 2, 3]   # 出走取消・発走除外・競走除外
+split:                                # 暫定（評価軸は後で決める）。market-baseline と同じ。両端を含む
+  train: ["2004-01-01", "2018-12-31"]
+  valid: ["2019-01-01", "2021-12-31"]
+  test: ["2022-01-01", "2025-12-31"]
+  holdout_never_evaluate: ["2026-01-01", "2026-12-31"]
+features:
+  version: features_v1
+  exclude: []                         # 学習から外す特徴量
+  config:                             # keiba_ai.features.FeatureConfig（全項目）
+    min_year: 1986
+    not_started_codes: [1, 2, 3]
+    n_last: 5
+    n_recent_mean: 3
+    rate_prior_strength: 20.0
+    recent_days: 365
+    speed_min_n: 30
+    behind_clip: [-2.0, 10.0]
+    fig_clip: [-10.0, 10.0]
+    training_window_days: 14
+lgbm:
+  num_boost_round: 5000
+  early_stopping_rounds: 100          # valid の最初の指標で止める
+  log_every: 200
+  params:
+    learning_rate: 0.05
+    num_leaves: 63
+    min_data_in_leaf: 200
+    feature_fraction: 0.8
+    bagging_fraction: 0.8
+    bagging_freq: 1
+    lambda_l2: 1.0
+    max_bin: 255
+    cat_smooth: 10
+    num_threads: 10
+    verbose: -1
+models:
+  A_top3:
+    objective: binary
+    label: y_top3
+    prob: softmax_temperature          # p ∝ exp(s·logit)、s は valid で決める
+    params: {metric: binary_logloss}
+  B_rank:
+    objective: lambdarank
+    label: relevance                   # max(0, relevance_top + 1 − 着順)。中止・失格は 0
+    relevance_top: 5
+    prob: softmax_temperature          # p ∝ exp(s·score)
+    params: {metric: ndcg, eval_at: [3]}
+  C_win:
+    objective: binary
+    label: y_win
+    prob: renormalize                  # p / Σp（レース内）
+    params: {metric: binary_logloss}
+temperature:
+  bounds: [0.01, 10.0]
+eval:
+  ece_bins: 10
+  importance_top: 20
+output:
+  preds_dir: data/processed/jra-van/derived
+  model_prefix: lgbm_                  # preds_lgbm_<model>.parquet、model_lgbm_<model>.txt
+git_tracked_paths:                     # 実行前にコミット済みであることを確かめるパス
+  - src/keiba_ai/features.py
+  - src/keiba_ai/lgbm_nomarket.py
+  - experiments/2026-11-14_lgbm-nomarket/config.yaml
