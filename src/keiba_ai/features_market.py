@@ -145,3 +145,92 @@ def load_market_features(data_dir: Path = DATA_DIR, refresh: bool = False) -> pl
 
 def _check_finite(df: pl.DataFrame) -> dict:
     return {c: float(np.mean(df[c].is_null().to_numpy())) for c in FEATURES}
+
+
+# --- market_v2（探索 09）: 券種間の食い違いの時間変化、馬連の票数、オッズの揺れ ------------------------
+
+VERSION2 = "market_v2"
+FEATURES2: dict[str, str] = {
+    "mk2_q_vs_win_30": "30 分前の log(馬連の周辺確率 / 単勝の比例正規化確率)",
+    "mk2_q_vs_win_60": "60 分前の同じ値",
+    "mk2_dq30": "log(10 分前の馬連の周辺確率 / 30 分前)",
+    "mk2_dq_vs_win30": "10 分前と 30 分前の q_vs_win の差（食い違いが広がったか）",
+    "mk2_q_pool_ratio": "log(10 分前の馬連票数 / 単勝票数)（レース単位）",
+    "mk2_pl_vs_win_30": "30 分前の log(複勝から作った確率 / 単勝の確率)",
+    "mk2_dpl30": "log(10 分前の複勝から作った確率 / 30 分前)",
+    "mk2_vol60": "発走 60〜10 分前の発表での log 単勝オッズの標準偏差",
+    "mk2_trend60": "同じ区間の log 単勝オッズの、時間（分）に対する傾き",
+    "mk2_n_ann": "発走 10 分前までの中間オッズの発表数（レース単位）",
+}
+
+
+def _quinella_marginals(data_dir: Path, snaps=("10", "30", "60")) -> pl.DataFrame:
+    q = (pl.scan_parquet(data_dir / "odds_ts_quinella_snap" / "**" / "*.parquet", hive_partitioning=True)
+         .filter(pl.col("snap").is_in(list(snaps)) & (pl.col("status") == "ok") & (pl.col("odds") > 0))
+         .select("race_key", "snap", "a", "b", "vote_total", w=1.0 / pl.col("odds")).collect())
+    long = pl.concat([q.select("race_key", "snap", umaban=pl.col("a").cast(pl.Int16), w="w"),
+                      q.select("race_key", "snap", umaban=pl.col("b").cast(pl.Int16), w="w")])
+    m = (long.group_by("race_key", "snap", "umaban").agg(pl.col("w").sum())
+         .with_columns(p=pl.col("w") / pl.col("w").sum().over("race_key", "snap"))
+         .pivot(on="snap", index=["race_key", "umaban"], values="p"))
+    m = m.rename({s: f"p_q_{s}" for s in snaps if s in m.columns})
+    pool = q.filter(pl.col("snap") == "10").group_by("race_key").agg(q_pool=pl.col("vote_total").max())
+    return m.join(pool, on="race_key", how="left")
+
+
+def _volatility(data_dir: Path) -> pl.DataFrame:
+    post = pl.scan_parquet(data_dir / "races.parquet").select("race_key", "post_at")
+    parts = []
+    for ydir in sorted((data_dir / "odds_ts_win").glob("year=*")):
+        lf = (pl.scan_parquet(ydir / "*.parquet")
+              .filter((pl.col("data_kubun") == INTERMEDIATE))
+              .select("race_key", "umaban", "announced_at", "win_odds", "win_status")
+              .join(post, on="race_key", how="inner")
+              .filter(pl.col("announced_at") <= pl.col("post_at") - pl.duration(minutes=DECISION_MIN))
+              .with_columns(mins=(pl.col("post_at") - pl.col("announced_at")).dt.total_seconds() / 60))
+        n_ann = lf.group_by("race_key").agg(mk2_n_ann=pl.col("announced_at").n_unique().cast(pl.Float64))
+        w = (lf.filter((pl.col("mins") <= 60) & (pl.col("win_status") == "ok") & (pl.col("win_odds") > 0))
+             .with_columns(lo=pl.col("win_odds").log())
+             .group_by("race_key", "umaban")
+             .agg(mk2_vol60=pl.col("lo").std(),
+                  # 傾き: cov(lo, −mins) / var(mins)（発走に近づく向きを正）
+                  mk2_trend60=pl.cov(pl.col("lo"), -pl.col("mins")) / pl.col("mins").var()))
+        parts.append(w.join(n_ann, on="race_key", how="left").collect())
+    df = pl.concat(parts)
+    return df.unique(subset=["race_key", "umaban"], keep="last")
+
+
+def build_v2(snap: pl.DataFrame, qm: pl.DataFrame, vol: pl.DataFrame) -> pl.DataFrame:
+    lo = lambda c: pl.col(c).log()  # noqa: E731
+    inv = lambda tag: 1.0 / pl.col(f"win_odds_{tag}")  # noqa: E731
+    d = snap.join(qm, on=["race_key", "umaban"], how="left").join(vol, on=["race_key", "umaban"], how="left")
+    d = d.with_columns(
+        **{f"_pp_{t}": inv(t) / inv(t).sum().over("race_key") for t in ("10", "30", "60")},
+        **{f"_plm_{t}": 1.0 / ((pl.col(f"place_odds_min_{t}") + pl.col(f"place_odds_max_{t}")) / 2) for t in ("10", "30")},
+    )
+    d = d.with_columns(**{f"_pl_{t}": pl.col(f"_plm_{t}") / pl.col(f"_plm_{t}").sum().over("race_key") for t in ("10", "30")})
+    out = d.select(
+        "race_key", "umaban",
+        mk2_q_vs_win_30=lo("p_q_30") - lo("_pp_30"),
+        mk2_q_vs_win_60=lo("p_q_60") - lo("_pp_60"),
+        mk2_dq30=lo("p_q_10") - lo("p_q_30"),
+        mk2_dq_vs_win30=(lo("p_q_10") - lo("_pp_10")) - (lo("p_q_30") - lo("_pp_30")),
+        mk2_q_pool_ratio=lo("q_pool") - lo("win_vote_total_10"),
+        mk2_pl_vs_win_30=lo("_pl_30") - lo("_pp_30"),
+        mk2_dpl30=lo("_pl_10") - lo("_pl_30"),
+        mk2_vol60="mk2_vol60", mk2_trend60="mk2_trend60", mk2_n_ann="mk2_n_ann",
+    )
+    return out.with_columns([pl.when(pl.col(c).is_finite()).then(pl.col(c)).otherwise(None).alias(c)
+                             for c in FEATURES2])
+
+
+def load_market_v2(data_dir: Path = DATA_DIR, refresh: bool = False) -> pl.DataFrame:
+    data_dir = Path(data_dir)
+    out = _derived(data_dir) / f"{VERSION2}.parquet"
+    srcs = [data_dir / "races.parquet", *(data_dir / "odds_ts_win").glob("year=*/*.parquet"),
+            *(data_dir / "odds_ts_quinella_snap").glob("year=*/*.parquet")]
+    if not refresh and out.exists() and out.stat().st_mtime >= max(p.stat().st_mtime for p in srcs):
+        return pl.read_parquet(out)
+    df = build_v2(snapshots(data_dir), _quinella_marginals(data_dir), _volatility(data_dir))
+    df.write_parquet(out)
+    return df

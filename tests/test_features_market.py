@@ -65,3 +65,26 @@ def test_market_features_ignore_announcements_after_decision(tmp_path):
     # 10 分前のスナップショットは発走 12 分前の発表（3 分おきの −12）
     assert fa["mk_mins"].unique().to_list() == [12.0]
     assert fa["mk_dfirst"].null_count() == 0
+
+
+def test_market_v2_ignores_late_announcements(tmp_path):
+    ts, q = _data(3)
+    q = pl.concat([q, q.filter(pl.col("snap") == "10").with_columns(snap=pl.lit("30")),
+                   q.filter(pl.col("snap") == "10").with_columns(snap=pl.lit("60"))]).with_columns(
+        vote_total=pl.lit(5_000_000))
+    post = pl.DataFrame({"race_key": ["2024010101010101", "2024010101010102"],
+                         "post_at": [dt.datetime(2024, 1, 1, 12, 0), dt.datetime(2024, 1, 1, 12, 30)]})
+    late = ts.join(post, on="race_key").with_columns(
+        late=pl.col("announced_at") > pl.col("post_at") - pl.duration(minutes=10))
+    ts2 = late.with_columns(win_odds=pl.when("late").then(pl.col("win_odds") * 7).otherwise("win_odds")).drop(
+        "post_at", "late")
+    q2 = q.with_columns(odds=pl.when(pl.col("snap") == "1").then(pl.col("odds") * 9).otherwise("odds"))
+    (tmp_path / "a").mkdir(), (tmp_path / "b").mkdir()
+    _write(tmp_path / "a", ts, q)
+    _write(tmp_path / "b", ts2, q2)
+    from polars.testing import assert_frame_equal
+
+    fa = fm.load_market_v2(tmp_path / "a").sort("race_key", "umaban")
+    fb = fm.load_market_v2(tmp_path / "b").sort("race_key", "umaban")
+    assert_frame_equal(fa, fb, rel_tol=1e-12)
+    assert fa["mk2_vol60"].null_count() == 0 and fa["mk2_q_pool_ratio"].null_count() == 0

@@ -44,7 +44,8 @@ FEATURE_CONFIG = dict(min_year=1986, not_started_codes=[1, 2, 3], n_last=5, n_re
 
 def blocks() -> dict[str, list[str]]:
     return {"v1": list(F.FEATURES), "market_v1": list(FM.FEATURES), "history_v2": list(H2.FEATURES),
-            "rating_v1": list(FR.FEATURES)}
+            "rating_v1": list(FR.FEATURES),
+            "market_v2": list(FM.FEATURES2)}
 
 
 def load_frame(extra: list[pl.DataFrame] | None = None) -> pd.DataFrame:
@@ -59,6 +60,8 @@ def load_frame(extra: list[pl.DataFrame] | None = None) -> pd.DataFrame:
     h2 = H2.load_hist2().with_columns(pl.col("umaban").cast(pl.Int16))
     df = (base.join(fv1, on=["race_key", "umaban"], how="left").join(fm, on=["race_key", "umaban"], how="left")
           .join(h2, on=["race_key", "umaban"], how="left")
+          .join(FM.load_market_v2().with_columns(pl.col("umaban").cast(pl.Int16)), on=["race_key", "umaban"],
+                how="left")
           .join(FR.load_rating().with_columns(pl.col("umaban").cast(pl.Int16)), on=["race_key", "umaban"], how="left"))
     for e in extra or []:
         df = df.join(e.with_columns(pl.col("umaban").cast(pl.Int16)), on=["race_key", "umaban"], how="left")
