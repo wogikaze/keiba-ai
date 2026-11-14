@@ -18,7 +18,7 @@ KUBUN_RANK = {
     "RA": {**{str(i): i for i in range(1, 8)}, "9": 8, "0": 9},
     "SE": {**{str(i): i for i in range(1, 8)}, "9": 8, "0": 9},
     "HR": {"1": 1, "2": 2, "9": 3, "0": 4},
-    "O1": {**{str(i): i for i in range(1, 6)}, "9": 6, "0": 7},
+    **{t: {**{str(i): i for i in range(1, 6)}, "9": 6, "0": 7} for t in ("O1", "O2", "O3", "O4", "O5", "O6")},
 }
 
 ODDS_STATUS = pl.Enum(["ok", "no_vote", "cancel_pre", "cancel_post"])
@@ -337,6 +337,73 @@ def announced_at(df: pl.DataFrame) -> pl.DataFrame:
     return df.with_columns(
         announced_at=s.str.strptime(pl.Datetime("us"), "%Y%m%d%H%M", strict=False)
     ).drop("announced_mdhm")
+
+
+# ---------------------------------------------------------------- O2〜O6 オッズ（馬連・ワイド・馬単・3連複・3連単）
+
+# レコード種別 → (bet_type, 仕様書の券種名, 組番の馬の数)。bet_type は payouts と同じ名前
+EXOTIC = {
+    "O2": ("quinella", "馬連", 2),
+    "O3": ("wide", "ワイド", 2),
+    "O4": ("exacta", "馬単", 2),
+    "O5": ("trio", "3連複", 3),
+    "O6": ("trifecta", "3連単", 3),
+}
+_STATUS_NAMES = ["ok", "no_vote", "cancel_pre", "cancel_post"]
+
+
+def _status_codes(b: Batch, name: str) -> np.ndarray:
+    """オッズの特殊値を (n, k) の整数（_STATUS_NAMES の位置）にする。
+
+    桁数は券種で違う（馬連 6 桁、ワイド 5 桁、3連単 7 桁）ので、全桁が `0` / `-` / `*` かで判定する。
+    """
+    a = b._cols(b.layout[name], None)  # (n, k, 桁数)
+    code = np.zeros(a.shape[:2], dtype=np.uint8)
+    for i, ch in enumerate(b"0-*", start=1):
+        code[(a == ch).all(axis=-1)] = i
+    return code
+
+
+def _status_series(name: str, code: np.ndarray) -> pl.Series:
+    return pl.Series(name, code, dtype=pl.UInt8).replace_strict(
+        dict(enumerate(_STATUS_NAMES)), return_dtype=ODDS_STATUS)
+
+
+def parse_exotic(b: Batch, rtype: str, order: np.ndarray) -> pl.DataFrame:
+    """O2〜O6 を (レコード, 組番) の長い形式に。組番が空白（登録なし）の枠は落とす。
+
+    a・b・c は組番の馬番（馬単・3連単は着順の順、馬連・ワイド・3連複は小さい順）。
+    ok 以外の組番はオッズと人気順を null にする。ワイドの特殊値は最低オッズで判定する。
+    """
+    bet, name, m = EXOTIC[rtype]
+    g = f"{name}オッズ"
+    combo_f = b.layout[f"{g}.組番"]
+    cnum = b.num(combo_f, None)  # (n, k)。空白は NaN
+    keep2 = ~np.isnan(cnum) & (cnum > 0)
+    k = cnum.shape[1]
+    rec = np.repeat(np.arange(len(b)), k).reshape(-1, k)[keep2]
+    cv = cnum[keep2].astype(np.int64)
+    um = [(cv // 100 ** (m - 1 - j)) % 100 for j in range(m)]
+    combo = b.raw(combo_f, None)[keep2]
+    odds_names = ["最低オッズ", "最高オッズ"] if rtype == "O3" else ["オッズ"]
+    code = _status_codes(b, f"{g}.{odds_names[0]}")[keep2]
+    ok = code == 0
+    pop = b.num(f"{g}.人気順", None)[keep2]
+    data: dict[str, pl.Series] = {"race_key": _ser("race_key", race_key(b)[rec])}
+    data |= {c: _ser(c, u, pl.Int8) for c, u in zip("abc", um)}
+    data["combination"] = pl.Series("combination", combo).cast(pl.String)
+    cols = ["odds_min", "odds_max"] if rtype == "O3" else ["odds"]
+    for col, on in zip(cols, odds_names):
+        v = b.num(f"{g}.{on}", None)[keep2] / 10  # × 0.1 より誤差が小さい（1234567 → 123456.7）
+        data[col] = _ser(col, np.where(ok, v, np.nan), pl.Float64)
+    data["pop"] = _ser("pop", np.where(ok, pop, np.nan), pl.Int16)
+    data["status"] = _status_series("status", code)
+    data["vote_total"] = _ser("vote_total", b.num(f"{name}票数合計", 0, 100.0)[rec], pl.Int64)
+    data["sale_flag"] = _ser("sale_flag", b.num(f"発売フラグ{name}")[rec], pl.Int8)
+    hdr = header(b, rtype, order)
+    idx = pl.Series(rec)
+    data |= {c: s.gather(idx) for c, s in hdr.items()}
+    return pl.DataFrame(data)
 
 
 # ---------------------------------------------------------------- マスタ

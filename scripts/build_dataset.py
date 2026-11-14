@@ -5,7 +5,7 @@
     uv run --extra ml python scripts/build_dataset.py --validate            # 検証の集計を表示
 
 差分更新: 生ファイルの大きさと更新時刻が前回と同じなら読み直さない。--force で全部読み直す。
---years は読み直す生ファイル（RACE/<年>.txt、SLOP/<年>.txt、0B41/<年>/）を絞る。
+--years は読み直す生ファイル（RACE/<年>.txt、SLOP/<年>.txt、0B41/<年>/、0B42/<年>/）を絞る。
 仕上げのテーブルは、それまでに取り込んだ全ファイルから作る。
 """
 
