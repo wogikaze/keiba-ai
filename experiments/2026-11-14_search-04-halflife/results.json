@@ -1,0 +1,153 @@
+{
+ "experiment": "2026-11-14_search-04-halflife",
+ "status": "done",
+ "git_hash": "451a181c2e392a6293a7bac028df096636419b1c",
+ "git_dirty_tracked_paths": "?? src/keiba_ai/features_rating.py",
+ "data_version": "jra-van@f223b0cb/features_v1-c7cb41+market_v1",
+ "seed": 42,
+ "split": "2004-2018/2019-2021/2022-2025",
+ "metrics": {
+  "search_valid_delta": -0.02369550115303926,
+  "search_valid_delta_se_date": 0.002190371098174334,
+  "search_test_delta": -0.019126358615416998,
+  "search_test_delta_ci_date": [
+   -0.02263729159781867,
+   -0.015545272318260323
+  ],
+  "search_test_logloss": 1.9262077699687836,
+  "search_valid_logloss": 1.9731227790716461,
+  "search_test_all_years_negative": true
+ },
+ "eval": {
+  "valid": {
+   "race": {
+    "delta": -0.02369550115303926,
+    "ci": [
+     -0.02795613409227417,
+     -0.019253317829667646
+    ],
+    "se": 0.0021917599086575946,
+    "logloss_model": 1.9731227790716461,
+    "logloss_ref": 1.9968182802246852,
+    "n_races": 10363,
+    "n_clusters": 10363
+   },
+   "date": {
+    "delta": -0.02369550115303926,
+    "ci": [
+     -0.028179885471604677,
+     -0.019486487286605143
+    ],
+    "se": 0.002190371098174334,
+    "logloss_model": 1.9731227790716461,
+    "logloss_ref": 1.9968182802246852,
+    "n_races": 10363,
+    "n_clusters": 325
+   }
+  },
+  "test": {
+   "race": {
+    "delta": -0.019126358615416998,
+    "ci": [
+     -0.02246877254755992,
+     -0.01547955438011238
+    ],
+    "se": 0.001800659283937861,
+    "logloss_model": 1.9262077699687836,
+    "logloss_ref": 1.9453341285842007,
+    "n_races": 13816,
+    "n_clusters": 13816
+   },
+   "date": {
+    "delta": -0.019126358615416998,
+    "ci": [
+     -0.02263729159781867,
+     -0.015545272318260323
+    ],
+    "se": 0.0018247336653915318,
+    "logloss_model": 1.9262077699687836,
+    "logloss_ref": 1.9453341285842007,
+    "n_races": 13816,
+    "n_clusters": 430
+   }
+  },
+  "test_by_year": {
+   "2022": -0.015982280410979568,
+   "2023": -0.020413335914482335,
+   "2024": -0.015690071652455395,
+   "2025": -0.024418417734666374
+  },
+  "benter_valid_fit": {
+   "alpha": 0.9483140298538132,
+   "beta": 0.04105729219724894,
+   "alpha_se": 0.04390587306613322,
+   "beta_se": 0.04391526234413671
+  },
+  "placebo_shuffle_alpha": [
+   {
+    "alpha": -0.0009733797725575497,
+    "se": 0.007145666142498333
+   },
+   {
+    "alpha": 0.008448974793206188,
+    "se": 0.0071642574561203275
+   },
+   {
+    "alpha": 0.0037283991448004575,
+    "se": 0.00712951726690819
+   },
+   {
+    "alpha": 0.0027878401999102452,
+    "se": 0.007189330372588296
+   },
+   {
+    "alpha": 0.014049515544127804,
+    "se": 0.007157989262579678
+   }
+  ]
+ },
+ "train": [
+  {
+   "seed": 42,
+   "best_iteration": 840,
+   "train_seconds": 98.1,
+   "valid_logloss_best": 1.9731227790716461,
+   "n_features": 100,
+   "n_train_rows": 737785,
+   "gain_share_top25": {
+    "mk_q_vs_win": 0.0549,
+    "mk_logodds": 0.035,
+    "race_symbol_code": 0.0308,
+    "h_corner4_mean3": 0.0221,
+    "horse_weight": 0.0221,
+    "h_days_since": 0.0198,
+    "venue_code": 0.0194,
+    "h_l3f_mean3_z": 0.0187,
+    "mk_d60": 0.0184,
+    "h_l3f_1": 0.0173,
+    "ts_last_1f": 0.0172,
+    "h_fig_max5_z": 0.0171,
+    "h_pos_2": 0.0166,
+    "jk_n_log": 0.0164,
+    "tr_n_log": 0.016,
+    "weight_carried_rel": 0.0159,
+    "ts_last_4f": 0.0156,
+    "sire_n_log": 0.0155,
+    "h_pos_3": 0.0151,
+    "h_fig_mean3_z": 0.0149,
+    "sire_top3_rate": 0.0139,
+    "h_behind_1": 0.0138,
+    "jk_win_rate_z": 0.0137,
+    "mk_overround": 0.0135,
+    "h_prize_log_z": 0.0131
+   }
+  }
+ ],
+ "n_races": {
+  "test": 13816,
+  "train": 51648,
+  "valid": 10363
+ },
+ "runtime_s": 102.6,
+ "note": "test は探索中の参考値（ADR 0005: 採否は valid だけで決める）"
+}
