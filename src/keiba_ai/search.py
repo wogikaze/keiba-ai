@@ -42,10 +42,31 @@ FEATURE_CONFIG = dict(min_year=1986, not_started_codes=[1, 2, 3], n_last=5, n_re
                       fig_clip=[-10.0, 10.0], training_window_days=14)
 
 
+CTX = {
+    "ctx_entropy": "10 分前の市場確率のエントロピー（レース単位）",
+    "ctx_pmax": "最も人気の馬の市場確率",
+    "ctx_p2": "2 番人気の市場確率",
+    "ctx_rel_max": "log(自分の市場確率 / 最大)",
+    "ctx_n_gt10": "市場確率 10% 超の頭数",
+}
+
+
+def add_ctx(pdf: pd.DataFrame) -> pd.DataFrame:
+    """レースの市場の形（10 分前の p_mkt だけから作る）。"""
+    p = pdf["p_mkt"].clip(lower=1e-12)
+    g = pdf.groupby(RACE)["p_mkt"]
+    pdf["ctx_entropy"] = (-(p * np.log(p))).groupby(pdf[RACE]).transform("sum")
+    pdf["ctx_pmax"] = g.transform("max")
+    pdf["ctx_p2"] = g.transform(lambda v: np.sort(v.to_numpy())[-2] if len(v) > 1 else np.nan)
+    pdf["ctx_rel_max"] = np.log(p / pdf["ctx_pmax"])
+    pdf["ctx_n_gt10"] = (pdf["p_mkt"] > 0.1).groupby(pdf[RACE]).transform("sum").astype(float)
+    return pdf
+
+
 def blocks() -> dict[str, list[str]]:
     return {"v1": list(F.FEATURES), "market_v1": list(FM.FEATURES), "history_v2": list(H2.FEATURES),
             "rating_v1": list(FR.FEATURES),
-            "market_v2": list(FM.FEATURES2)}
+            "market_v2": list(FM.FEATURES2), "ctx": list(CTX)}
 
 
 def load_frame(extra: list[pl.DataFrame] | None = None) -> pd.DataFrame:
@@ -68,6 +89,7 @@ def load_frame(extra: list[pl.DataFrame] | None = None) -> pd.DataFrame:
     pdf = df.to_pandas()
     pdf["date"] = pd.to_datetime(pdf["date"])
     pdf[RACE] = pdf["race_key"]
+    pdf = add_ctx(pdf)
     for c in F.CATEGORICAL:
         if c in pdf:
             pdf[c] = pdf[c].astype("category")
