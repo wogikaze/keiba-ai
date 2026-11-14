@@ -60,13 +60,17 @@ class RaceSoftmax:
 
     race: np.ndarray
     y: np.ndarray
+    weight: np.ndarray | None = None  # 行ごとの重み（同じレースの行は同じ値にする）。勾配・ヘッセ行列に掛ける
 
     def __post_init__(self):
         self.gid, self.n = group_ids(self.race)
         self.t = targets(self.y, self.gid, self.n)
 
     def objective(self, preds, _dataset):
-        return race_softmax_grad_hess(preds, self.t, self.gid, self.n)
+        g, h = race_softmax_grad_hess(preds, self.t, self.gid, self.n)
+        if self.weight is not None:
+            g, h = g * self.weight, h * self.weight
+        return g, h
 
     def metric(self, preds):
         return race_nll(preds, self.t, self.gid, self.n)
