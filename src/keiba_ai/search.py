@@ -28,6 +28,7 @@ import polars as pl
 
 from keiba_ai import evaluate as ev
 from keiba_ai import features as F
+from keiba_ai import features_hist2 as H2
 from keiba_ai import features_market as FM
 from keiba_ai import market_offset as mof
 
@@ -40,7 +41,7 @@ FEATURE_CONFIG = dict(min_year=1986, not_started_codes=[1, 2, 3], n_last=5, n_re
 
 
 def blocks() -> dict[str, list[str]]:
-    return {"v1": list(F.FEATURES), "market_v1": list(FM.FEATURES)}
+    return {"v1": list(F.FEATURES), "market_v1": list(FM.FEATURES), "history_v2": list(H2.FEATURES)}
 
 
 def load_frame(extra: list[pl.DataFrame] | None = None) -> pd.DataFrame:
@@ -49,7 +50,9 @@ def load_frame(extra: list[pl.DataFrame] | None = None) -> pd.DataFrame:
     fv1 = F.load_features(F.FeatureConfig.from_dict(FEATURE_CONFIG)).select("race_key", *F.FEATURES)
     fv1 = fv1.with_columns(pl.col("umaban").cast(pl.Int16))
     fm = FM.load_market_features().with_columns(pl.col("umaban").cast(pl.Int16))
-    df = base.join(fv1, on=["race_key", "umaban"], how="left").join(fm, on=["race_key", "umaban"], how="left")
+    h2 = H2.load_hist2().with_columns(pl.col("umaban").cast(pl.Int16))
+    df = (base.join(fv1, on=["race_key", "umaban"], how="left").join(fm, on=["race_key", "umaban"], how="left")
+          .join(h2, on=["race_key", "umaban"], how="left"))
     for e in extra or []:
         df = df.join(e.with_columns(pl.col("umaban").cast(pl.Int16)), on=["race_key", "umaban"], how="left")
     pdf = df.to_pandas()
