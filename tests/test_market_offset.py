@@ -80,3 +80,31 @@ def test_clogit_recovers_coefficients():
         y[r * size + rng.choice(size, p=p[sl])] = 1
     fit = mo.fit_clogit(X, mo.targets(y, gid, n), gid, n)
     np.testing.assert_allclose(fit["coef"], [1.0, -0.5], atol=4 * fit["se"].max())
+
+
+def test_race_pl_gradient_matches_finite_difference():
+    from keiba_ai.market_offset import RacePL
+
+    rng = np.random.default_rng(0)
+    race = np.repeat(np.arange(30), 6)
+    fp = np.concatenate([rng.permutation(6) + 1 for _ in range(30)]).astype(float)
+    fp[5] = np.nan  # 中止の馬
+    y = (fp == 1).astype(float)
+    obj = RacePL(race, y, fp, gammas=(1.0, 0.8, 0.7), weights=(1.0, 0.5, 0.3))
+    s = rng.normal(size=len(race))
+
+    def loss(s):
+        from keiba_ai.market_offset import race_nll
+        L = race_nll(s, obj.t, obj.gid, obj.n) * obj.n
+        for k, rem, chosen in obj.stages:
+            gk, wk = obj.gammas[k - 1], obj.weights[k - 1]
+            p = obj._stage_p(s, rem, gk)
+            L += wk * -np.sum(np.log(p[chosen]))
+        return L
+
+    g, h = obj.objective(s, None)
+    eps = 1e-6
+    for i in [0, 3, 5, 17, 100]:
+        d = np.zeros_like(s)
+        d[i] = eps
+        np.testing.assert_allclose(g[i], (loss(s + d) - loss(s - d)) / (2 * eps), rtol=1e-4, atol=1e-6)

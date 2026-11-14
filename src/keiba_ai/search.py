@@ -11,6 +11,7 @@
     weight_halflife_years: null     # 学習の重みを新しいほど大きく（半減期・年）
     num_boost_round, early_stopping_rounds
     init: p_mkt                     # オフセット（log p）。p_mkt のほか、p_offset（前段の予測）も可
+    objective: softmax | pl_top3    # pl_top3 は 2・3 着も使う（pl_gammas・pl_weights、market_offset.RacePL）
 
 返り値の指標: valid・test の ΔlogLoss（vs p_mkt、レース単位・開催日単位）、年ごとの Δ、Benter の α（valid で当てはめ、
 test で評価）、プラセボ（レース内で予測を並べ替えたときの α と Δ）、特徴量の gain。
@@ -50,6 +51,9 @@ def load_frame(extra: list[pl.DataFrame] | None = None) -> pd.DataFrame:
     fv1 = F.load_features(F.FeatureConfig.from_dict(FEATURE_CONFIG)).select("race_key", *F.FEATURES)
     fv1 = fv1.with_columns(pl.col("umaban").cast(pl.Int16))
     fm = FM.load_market_features().with_columns(pl.col("umaban").cast(pl.Int16))
+    fin = pl.read_parquet(F.DATA_DIR / "entries.parquet", columns=["race_key", "umaban", "finish_pos"]).with_columns(
+        pl.col("umaban").cast(pl.Int16))
+    base = base.join(fin, on=["race_key", "umaban"], how="left")
     h2 = H2.load_hist2().with_columns(pl.col("umaban").cast(pl.Int16))
     df = (base.join(fv1, on=["race_key", "umaban"], how="left").join(fm, on=["race_key", "umaban"], how="left")
           .join(h2, on=["race_key", "umaban"], how="left"))
@@ -84,7 +88,14 @@ def train(pdf: pd.DataFrame, cfg: dict, seed: int) -> tuple[np.ndarray, dict]:
     if cfg.get("weight_halflife_years"):
         age = (pd.Timestamp("2019-01-01") - pdf.loc[tr, "date"]).dt.days / 365.25
         w = np.power(0.5, age / cfg["weight_halflife_years"]).to_numpy()
-    obj = mof.RaceSoftmax(pdf.loc[tr, RACE].to_numpy(), pdf.loc[tr, "y"].to_numpy(), weight=w)
+    if cfg.get("objective", "softmax") == "pl_top3":
+        if w is not None:
+            raise ValueError("pl_top3 と重みの組み合わせは未対応")
+        obj = mof.RacePL(pdf.loc[tr, RACE].to_numpy(), pdf.loc[tr, "y"].to_numpy(),
+                         pdf.loc[tr, "finish_pos"].to_numpy(float), gammas=tuple(cfg["pl_gammas"]),
+                         weights=tuple(cfg["pl_weights"]))
+    else:
+        obj = mof.RaceSoftmax(pdf.loc[tr, RACE].to_numpy(), pdf.loc[tr, "y"].to_numpy(), weight=w)
     ev_va = mof.RaceSoftmax(pdf.loc[va, RACE].to_numpy(), pdf.loc[va, "y"].to_numpy())
     dtr = lgb.Dataset(pdf.loc[tr, feats], label=pdf.loc[tr, "y"].to_numpy(float), init_score=init[tr.to_numpy()],
                       categorical_feature=cats, free_raw_data=False)

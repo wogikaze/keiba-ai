@@ -140,3 +140,58 @@ class Standardizer:
         na = x[self.na_cols_].isna().astype(float).to_numpy()
         z = ((x.fillna(self.median_) - self.mean_) / self.sd_).clip(-self.clip, self.clip).to_numpy()
         return np.hstack([z, na]), [*self.cols, *[f"{c}_isna" for c in self.na_cols_]]
+
+
+# --- 上位 3 着の Plackett-Luce（探索 08） ----------------------------------------------
+
+@dataclass
+class RacePL:
+    """1 着は RaceSoftmax と同じ（同着は等分）。2・3 着は、残った馬の中で exp(γ_k·score) に比例して選ばれる。
+
+    L = Σ_races [ −Σ t log softmax(score) + Σ_{k=2,3} w_k ( −γ_k s_{c_k} + log Σ_{j∈R_k} exp(γ_k s_j) ) ]
+    R_k は 1〜k−1 着の馬を除いた出走馬（着順のない馬 = 中止・失格も残る）。k 着の馬がちょうど 1 頭のレースだけ
+    （それより前の着順も 1 頭ずつ）その段を足す。勾配は w_k γ_k (p^k − 1[c_k])、対角ヘッセ行列は w_k γ_k² p^k (1 − p^k)。
+    """
+
+    race: np.ndarray
+    y: np.ndarray
+    finish_pos: np.ndarray
+    gammas: tuple = (1.0, 1.0, 1.0)
+    weights: tuple = (1.0, 1.0, 1.0)
+
+    def __post_init__(self):
+        self.gid, self.n = group_ids(self.race)
+        self.t = targets(self.y, self.gid, self.n)
+        fp = np.nan_to_num(np.asarray(self.finish_pos, float), nan=99.0)
+        self.stages = []
+        ok = np.ones(self.n, bool)
+        for k in (1, 2, 3):
+            cnt = np.bincount(self.gid, weights=(fp == k).astype(float), minlength=self.n)
+            ok &= cnt == 1
+            if k == 1:
+                continue
+            races_ok = ok[self.gid]
+            rem = races_ok & (fp >= k)              # 残った馬
+            chosen = races_ok & (fp == k)
+            self.stages.append((k, rem, chosen))
+
+    def _stage_p(self, score, rem, g):
+        s = np.where(rem, g * score, -np.inf)
+        m = np.full(self.n, -np.inf)
+        np.maximum.at(m, self.gid, s)
+        m = np.where(np.isfinite(m), m, 0.0)
+        e = np.where(rem, np.exp(s - m[self.gid]), 0.0)
+        den = np.bincount(self.gid, weights=e, minlength=self.n)
+        return np.where(rem, e / np.where(den > 0, den, 1.0)[self.gid], 0.0)
+
+    def objective(self, preds, _dataset):
+        g, h = race_softmax_grad_hess(preds, self.t, self.gid, self.n)
+        for (k, rem, chosen) in self.stages:
+            gk, wk = self.gammas[k - 1], self.weights[k - 1]
+            p = self._stage_p(preds, rem, gk)
+            g = g + wk * gk * (p - chosen)
+            h = h + wk * gk * gk * p * (1 - p)
+        return g, np.maximum(h, 1e-12)
+
+    def metric(self, preds):
+        return race_nll(preds, self.t, self.gid, self.n)
