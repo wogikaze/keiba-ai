@@ -1,0 +1,75 @@
+seed: 42
+data:
+  version: auto
+  tables: [races, entries, payouts, odds_final, odds_ts_win, odds_ts_quinella_snap, odds_final_quinella,
+           odds_final_wide, odds_final_exacta, odds_final_trio, odds_final_trifecta]
+split:                                  # ADR 0004（両端を含む）。2026 年以降は holdout で触らない
+  train: ["2004-01-01", "2018-12-31"]
+  valid: ["2019-01-01", "2021-12-31"]
+  test: ["2022-01-01", "2025-12-31"]
+  holdout_never_evaluate_from: "2026-01-01"
+model:
+  preds: data/processed/jra-van/derived/preds_offset_lgbm.parquet   # make_preds.py の出力
+  prob_col: p_offset
+  market_col: p_mkt                       # 10 分前 × power_fit（出走馬で正規化）
+  expected_test_logloss: 1.9317          # market-combination の値。make_preds の作り直しが一致するか
+decision:
+  minutes_before: 10
+  momentum_minutes: 30                   # P3 のオッズ変化のモデルの入力（30 分前のオッズ）
+  # 決定時刻の発表に載っていて後で取消・除外になった馬のいるレースは除く（モデルの予測がない）
+  drop_races_scratched_after_decision: true
+  place_k_rule: {min_3: 8, min_2: 5}      # 頭数 8 以上は 3 着まで、5〜7 は 2 着まで、4 以下は複勝なし
+bet_types: [win, place, quinella, wide, exacta, trio, trifecta]
+# 券種ごとの判断オッズ: n10 = 実際の 10 分前オッズ、drift = 10 分前から予測した確定オッズ（P3）、
+# price = 10 分前の単勝オッズから価格モデルで予測した確定オッズ
+odds_sources:
+  win: [n10, drift]
+  place: [n10, drift]                    # 複勝は 10 分前の下限オッズ
+  quinella: [n10, drift, price]          # price は検算用（Holm の family に入れない）
+  wide: [price]                          # 価格モデルは odds_min を予測する
+  exacta: [price]
+  trio: [price]
+  trifecta: [price]
+policies:
+  P1: {odds_sources: [n10, price]}       # 判断オッズが n10 か price のときに定額
+  P2: {odds_sources: [n10, price]}
+  P3: {odds_sources: [drift]}            # price の券種は P2 がすでに「予測した確定オッズ」なので P3 を作らない
+holm_exclude: ["quinella/price/P1", "quinella/price/P2"]
+gamma:
+  market_fit_on: train
+  model_fit_on: valid
+  bounds: [0.2, 2.0]
+pricing:
+  fit_on: train
+  n_races_sample: 3000                   # train から無作為に（3連単は 1 レース最大 4,896 組番）
+  drift_fit_on: train
+grid:
+  P1:
+    tau: [1.0, 1.1, 1.2, 1.5, 2.0]
+    bands:                               # [lo, hi)。高い帯が穴狙い
+      win: [[1, 1.0e9], [1, 5], [5, 20], [20, 1.0e9]]
+      place: [[1, 1.0e9], [1, 2], [2, 5], [5, 1.0e9]]
+      quinella: [[1, 1.0e9], [1, 20], [20, 100], [100, 1.0e9]]
+      wide: [[1, 1.0e9], [1, 10], [10, 50], [50, 1.0e9]]
+      exacta: [[1, 1.0e9], [1, 30], [30, 200], [200, 1.0e9]]
+      trio: [[1, 1.0e9], [1, 50], [50, 500], [500, 1.0e9]]
+      trifecta: [[1, 1.0e9], [1, 200], [200, 2000], [2000, 1.0e9]]
+    unit_yen: 1000
+    min_bets_valid: 300
+    select_by: valid_roi_ci_low
+  P2: &kelly
+    lambda: [0.05, 0.1, 0.25, 0.5]
+    cap: [0.01, 0.03, 0.1]               # 1 レースの合計の上限（資金に対する割合）
+    bankroll0_yen: 1000000
+    min_stake_yen: 100
+    select_by: valid_log_growth
+  P3: *kelly
+placebo:
+  n_rep: 1000
+  pass_percentile: 95
+eval:
+  bootstrap: {n_boot: 2000, level: 0.95, cluster: date}
+  alpha: 0.05
+git_tracked_paths:
+  - src/keiba_ai/betting
+  - experiments/2026-11-14_betting-policies
